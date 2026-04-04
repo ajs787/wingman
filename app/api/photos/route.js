@@ -1,29 +1,32 @@
-import { createServerSupabaseClient, createAdminClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { writeFile, mkdir, unlink } from 'fs/promises';
+import path from 'path';
+import { connectDB } from '@/lib/mongodb';
+import User from '@/lib/models/User';
+import { getSession } from '@/lib/auth';
 
-async function getAuthedUser(supabase) {
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) return null;
-  return user;
+function photoWithUrl(photo, userId) {
+  return {
+    ...photo,
+    url: photo.filename ? `/uploads/${userId}/${photo.filename}` : null,
+  };
 }
 
-// POST /api/photos/reorder — update photo positions metadata only
 const reorderSchema = z.object({
   photos: z.array(
     z.object({
-      id: z.number(),
-      position: z.number().int().min(0).max(4),
-      prompt_id: z.number().nullable().optional(),
+      position:      z.number().int().min(0).max(4),
+      filename:      z.string(),
+      prompt:        z.string().max(300).nullable().optional(),
       prompt_answer: z.string().max(300).nullable().optional(),
     })
-  ).length(5),
+  ).max(5),
 });
 
 export async function POST(request) {
-  const supabase = createServerSupabaseClient();
-  const user = await getAuthedUser(supabase);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const session = getSession(request);
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { searchParams } = new URL(request.url);
   const action = searchParams.get('action');
@@ -36,39 +39,17 @@ export async function POST(request) {
     const parsed = reorderSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
 
-    const admin = createAdminClient();
-    // Verify all photos belong to user
-    const ids = parsed.data.photos.map((p) => p.id);
-    const { data: existing } = await admin
-      .from('photos')
-      .select('id')
-      .eq('user_id', user.id)
-      .in('id', ids);
-
-    if (!existing || existing.length !== ids.length) {
-      return NextResponse.json({ error: 'Photo ownership check failed' }, { status: 403 });
-    }
-
-    // Upsert positions
-    for (const photo of parsed.data.photos) {
-      await admin
-        .from('photos')
-        .update({
-          position: photo.position,
-          prompt_id: photo.prompt_id ?? null,
-          prompt_answer: photo.prompt_answer ?? null,
-        })
-        .eq('id', photo.id)
-        .eq('user_id', user.id);
-    }
-
+    await connectDB();
+    await User.findByIdAndUpdate(session.sub, { $set: { photos: parsed.data.photos } });
     return NextResponse.json({ success: true });
   }
 
-  // Default: upload photo. Expects multipart/form-data
+  // Default: upload file via multipart/form-data
   const formData = await request.formData();
   const file = formData.get('file');
   const position = parseInt(formData.get('position') ?? '0', 10);
+  const prompt = formData.get('prompt') ?? null;
+  const prompt_answer = formData.get('prompt_answer') ?? null;
 
   if (!file || typeof file === 'string') {
     return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -77,79 +58,68 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Position must be 0–4' }, { status: 400 });
   }
 
-  const admin = createAdminClient();
+  const userId = session.sub;
+  const uploadDir = path.join(process.cwd(), 'public', 'uploads', userId);
+  await mkdir(uploadDir, { recursive: true });
 
-  // Delete existing photo at this position (storage + db record)
-  const { data: oldPhoto } = await admin
-    .from('photos')
-    .select('id, storage_path')
-    .eq('user_id', user.id)
-    .eq('position', position)
-    .single();
+  await connectDB();
+  const user = await User.findById(userId);
+  if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-  if (oldPhoto) {
-    await admin.storage.from('profile-photos').remove([oldPhoto.storage_path]);
-    await admin.from('photos').delete().eq('id', oldPhoto.id);
+  // Delete old file at this position
+  const existing = user.photos.find((p) => p.position === position);
+  if (existing?.filename) {
+    const oldPath = path.join(uploadDir, existing.filename);
+    await unlink(oldPath).catch(() => {});
   }
 
-  // Upload new file
-  const ext = file.name?.split('.').pop() || 'jpg';
+  // Save new file
+  const ext = (file.name?.split('.').pop() || 'jpg').toLowerCase();
   const random = Math.random().toString(36).slice(2, 8);
-  const storagePath = `${user.id}/${position}-${random}.${ext}`;
+  const filename = `${position}-${random}.${ext}`;
+  const filePath = path.join(uploadDir, filename);
+
   const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
+  await writeFile(filePath, Buffer.from(arrayBuffer));
 
-  const { error: uploadError } = await admin.storage
-    .from('profile-photos')
-    .upload(storagePath, buffer, {
-      contentType: file.type || 'image/jpeg',
-      upsert: true,
-    });
+  // Update photos array in MongoDB
+  const newPhoto = { position, filename, prompt: prompt || null, prompt_answer: prompt_answer || null };
 
-  if (uploadError) {
-    return NextResponse.json({ error: uploadError.message }, { status: 500 });
+  if (existing) {
+    await User.updateOne(
+      { _id: userId, 'photos.position': position },
+      { $set: { 'photos.$': newPhoto } }
+    );
+  } else {
+    await User.updateOne({ _id: userId }, { $push: { photos: newPhoto } });
   }
 
-  // Insert db record
-  const { data: photoRecord, error: dbError } = await admin
-    .from('photos')
-    .insert({ user_id: user.id, storage_path: storagePath, position })
-    .select()
-    .single();
-
-  if (dbError) {
-    await admin.storage.from('profile-photos').remove([storagePath]);
-    return NextResponse.json({ error: dbError.message }, { status: 500 });
-  }
-
-  const { data: { publicUrl } } = admin.storage
-    .from('profile-photos')
-    .getPublicUrl(storagePath);
-
-  return NextResponse.json({ photo: { ...photoRecord, publicUrl } });
+  return NextResponse.json({
+    photo: { ...newPhoto, url: `/uploads/${userId}/${filename}` },
+  });
 }
 
 export async function DELETE(request) {
-  const supabase = createServerSupabaseClient();
-  const user = await getAuthedUser(supabase);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const session = getSession(request);
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { searchParams } = new URL(request.url);
-  const photoId = parseInt(searchParams.get('id') ?? '', 10);
-  if (isNaN(photoId)) return NextResponse.json({ error: 'Missing photo id' }, { status: 400 });
+  const position = parseInt(searchParams.get('position') ?? '', 10);
+  if (isNaN(position)) return NextResponse.json({ error: 'Missing position' }, { status: 400 });
 
-  const admin = createAdminClient();
-  const { data: photo } = await admin
-    .from('photos')
-    .select('id, storage_path')
-    .eq('id', photoId)
-    .eq('user_id', user.id)
-    .single();
+  const userId = session.sub;
+  await connectDB();
+  const user = await User.findById(userId);
+  if (!user) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  if (!photo) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  const photo = user.photos.find((p) => p.position === position);
+  if (!photo) return NextResponse.json({ error: 'Photo not found' }, { status: 404 });
 
-  await admin.storage.from('profile-photos').remove([photo.storage_path]);
-  await admin.from('photos').delete().eq('id', photoId);
+  if (photo.filename) {
+    const filePath = path.join(process.cwd(), 'public', 'uploads', userId, photo.filename);
+    await unlink(filePath).catch(() => {});
+  }
 
+  await User.updateOne({ _id: userId }, { $pull: { photos: { position } } });
   return NextResponse.json({ success: true });
 }

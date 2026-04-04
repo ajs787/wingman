@@ -10,7 +10,7 @@
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 340 82% 52%;
+    --primary: 0 0% 0%;
     --primary-foreground: 0 0% 100%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -22,8 +22,30 @@
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 340 82% 52%;
+    --ring: 0 0% 0%;
     --radius: 1rem;
+  }
+
+  .dark {
+    --background: 222 47% 7%;
+    --foreground: 210 40% 98%;
+    --card: 222 40% 10%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 40% 10%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 222 47% 7%;
+    --secondary: 217 19% 16%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 19% 16%;
+    --muted-foreground: 215 20.2% 70%;
+    --accent: 217 19% 16%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 45%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 19% 20%;
+    --input: 217 19% 20%;
+    --ring: 210 40% 90%;
   }
 }
 
@@ -36,13 +58,26 @@
   }
 }
 
-/* Custom gradient CTA buttons */
+/* Custom CTA buttons - solid colors */
+.btn-primary,
 .btn-gradient {
-  background: linear-gradient(135deg, #f43f5e 0%, #ec4899 50%, #a855f7 100%);
+  background-color: #000000;
 }
 
+.btn-primary:hover,
 .btn-gradient:hover {
-  background: linear-gradient(135deg, #e11d48 0%, #db2777 50%, #9333ea 100%);
+  background-color: #262626;
+}
+
+.dark .btn-primary,
+.dark .btn-gradient {
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+.dark .btn-primary:hover,
+.dark .btn-gradient:hover {
+  background-color: #e2e8f0;
 }
 
 /* Card polish */
@@ -74,3 +109,34 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Global dark-mode utility overrides for existing slate/white classes */
+.dark .bg-white { background-color: rgb(15 23 42) !important; }
+.dark .bg-slate-50 { background-color: rgb(30 41 59) !important; }
+.dark .bg-slate-100 { background-color: rgb(51 65 85) !important; }
+.dark .bg-gray-50 { background-color: rgb(30 41 59) !important; }
+
+.dark .text-slate-900,
+.dark .text-slate-800,
+.dark .text-black { color: rgb(241 245 249) !important; }
+
+.dark .text-slate-700,
+.dark .text-slate-600,
+.dark .text-slate-500 { color: rgb(203 213 225) !important; }
+
+.dark .text-slate-400,
+.dark .text-slate-300 { color: rgb(148 163 184) !important; }
+
+.dark .border-slate-100,
+.dark .border-slate-200,
+.dark .border-gray-100,
+.dark .border-gray-200,
+.dark .border-gray-300 { border-color: rgb(51 65 85) !important; }
+
+.dark .hover\:bg-slate-50:hover,
+.dark .hover\:bg-gray-50:hover,
+.dark .hover\:bg-slate-100:hover { background-color: rgb(51 65 85) !important; }
+
+.dark .hover\:text-slate-800:hover,
+.dark .hover\:text-slate-700:hover,
+.dark .hover\:text-black:hover { color: rgb(248 250 252) !important; }

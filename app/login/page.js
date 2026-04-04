@@ -2,73 +2,150 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Script from 'next/script';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Mail } from 'lucide-react';
+import { Bird, Phone, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 
-// Pre-saved profiles — loaded automatically on first login for these accounts
-const PRESET_PROFILES = {
-  'ajs787': {
-    name: 'Audrey Shin',
-    age: 21,
-    year: 'Junior',
-    major: 'Computer Science',
-    gender: 'Woman',
-    looking_for: 'Men',
-    personality_answer: 'Night owl 🦉',
-    prompts: [
-      { prompt: "My go-to stress reliever...", answer: "matcha and sad playlists" },
-      { prompt: "We'll get along if...", answer: "you have strong opinions on where to eat" },
-    ],
-  },
-};
-
-export default function LoginPage() {
+function AuthForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialMode = searchParams.get('mode') === 'signup' ? 'signup' : 'login';
+
+  const [authType, setAuthType] = useState('email'); // 'email' | 'phone'
+  const [mode, setMode] = useState(initialMode);
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
+  const [googleReady, setGoogleReady] = useState(false);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  // Initialize Google Sign-In after script loads
+  const handleGoogleScriptLoad = () => {
+    if (window.google) {
+      google.accounts.id.initialize({
+        client_id: '379185107870-dnihr4sldvtrs9i38uim0aj61u8rp6n1.apps.googleusercontent.com',
+        callback: handleGoogleSignIn,
+      });
+      google.accounts.id.renderButton(
+        document.getElementById('google-button'),
+        { theme: 'outline', size: 'large', width: '100%' }
+      );
+      setGoogleReady(true);
+    }
+  };
+
+  async function handleGoogleSignIn(response) {
+    setGoogleLoading(true);
     setError('');
-    const trimmed = email.trim().toLowerCase();
-    if (!trimmed) return;
-
-    setLoading(true);
     try {
-      const res = await fetch('/api/auth/mock-login', {
+      const res = await fetch('/api/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: trimmed }),
+        body: JSON.stringify({ idToken: response.credential }),
       });
+      const data = await res.json();
+
       if (!res.ok) {
-        const { error: msg } = await res.json();
-        setError(msg || 'Login failed');
+        setError(data.error || 'Google sign-in failed');
         return;
       }
 
-      const netid = trimmed.split('@')[0];
+      localStorage.setItem('penguin_user', JSON.stringify({
+        userId: data.userId,
+        email: data.email,
+        netid: data.netid,
+      }));
 
-      // Store current user so other pages can namespace their localStorage
-      localStorage.setItem('wingru_current_user', JSON.stringify({ email: trimmed, netid }));
-
-      const profileKey = `wingru_profile_${netid}`;
-      const existing = localStorage.getItem(profileKey);
-
-      if (!existing && PRESET_PROFILES[netid]) {
-        // First login for a preset account — populate the profile silently
-        localStorage.setItem(profileKey, JSON.stringify(PRESET_PROFILES[netid]));
+      const next = searchParams.get('next');
+      if (next && next.startsWith('/')) {
+        router.push(next);
+      } else if (data.hasProfile) {
         router.push('/feed');
-      } else if (existing) {
-        const p = JSON.parse(existing);
-        // If they have a name, profile is complete — go to feed; else finish onboarding
-        router.push(p.name ? '/feed' : '/onboarding');
       } else {
-        // Brand new user — clean slate onboarding
+        router.push('/onboarding');
+      }
+    } catch {
+      setError('Something went wrong with Google sign-in');
+    } finally {
+      setGoogleLoading(false);
+    }
+  }
+
+  function switchMode(m) {
+    setMode(m);
+    setError('');
+    setPassword('');
+    setConfirm('');
+    setOtpSent(false);
+    setOtp('');
+  }
+
+  async function handlePhoneRequestOTP(e) {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/phone/request-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone_number: phoneNumber }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Failed to send OTP');
+        return;
+      }
+
+      setOtpSent(true);
+    } catch {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handlePhoneVerifyOTP(e) {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/phone/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone_number: phoneNumber, otp }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'OTP verification failed');
+        return;
+      }
+
+      localStorage.setItem('penguin_user', JSON.stringify({
+        userId: data.userId,
+        email: data.email,
+        netid: data.netid,
+      }));
+
+      const next = searchParams.get('next');
+      if (next && next.startsWith('/')) {
+        router.push(next);
+      } else if (data.hasProfile) {
+        router.push('/feed');
+      } else {
         router.push('/onboarding');
       }
     } catch {
@@ -78,48 +155,313 @@ export default function LoginPage() {
     }
   }
 
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError('');
+
+    if (mode === 'signup' && password !== confirm) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const endpoint = mode === 'signup' ? '/api/auth/signup' : '/api/auth/login';
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Something went wrong.');
+        return;
+      }
+
+      localStorage.setItem('penguin_user', JSON.stringify({
+        userId: data.userId,
+        email: data.email,
+        netid: data.netid,
+      }));
+
+      const next = searchParams.get('next');
+      if (next && next.startsWith('/')) {
+        router.push(next);
+      } else if (data.hasProfile) {
+        router.push('/feed');
+      } else {
+        router.push('/onboarding');
+      }
+    } catch {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const isSignup = mode === 'signup';
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-white px-6">
-      <div className="w-full max-w-sm">
-        <div className="flex justify-center mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-500 flex items-center justify-center shadow-lg shadow-rose-200">
-            <Mail className="w-6 h-6 text-white" />
+    <div className="min-h-screen flex flex-col bg-white px-6">
+      <Script
+        src="https://accounts.google.com/gsi/client"
+        async
+        defer
+        onLoad={handleGoogleScriptLoad}
+      />
+
+      {/* Back button */}
+      <div className="w-full max-w-sm mx-auto pt-6">
+        <Link href="/" className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-700 transition-colors">
+          <ArrowLeft className="w-5 h-5" />
+          <span className="text-sm font-medium">Back</span>
+        </Link>
+      </div>
+
+      <div className="flex-1 flex flex-col items-center justify-center">
+        <div className="w-full max-w-sm">
+
+          {/* Logo - clickable */}
+          <Link href="/" className="flex justify-center mb-8">
+            <div className="w-12 h-12 rounded-2xl bg-black flex items-center justify-center shadow-lg shadow-gray-400 hover:bg-gray-800 transition-colors">
+              <Bird className="w-6 h-6 text-white" />
+            </div>
+          </Link>
+
+        {/* Mode toggle */}
+        <div className="flex rounded-xl border border-slate-200 p-1 mb-8 bg-slate-50">
+          <button
+            type="button"
+            onClick={() => switchMode('signup')}
+            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${
+              isSignup ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            Sign up
+          </button>
+          <button
+            type="button"
+            onClick={() => switchMode('login')}
+            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${
+              !isSignup ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            Log in
+          </button>
+        </div>
+
+        <h1 className="text-2xl font-bold text-slate-900 text-center mb-1">
+          {isSignup ? 'Create your account' : 'Welcome back'}
+        </h1>
+        <p className="text-slate-400 text-center text-sm mb-8">
+          {isSignup ? 'Start finding matches through your friends.' : 'Log in to continue to Penguin.'}
+        </p>
+
+        {/* Auth type toggle (Email vs Phone) */}
+        <div className="flex gap-2 mb-6 border border-slate-200 rounded-lg p-1 bg-slate-50">
+          <button
+            type="button"
+            onClick={() => { setAuthType('email'); setError(''); setOtpSent(false); }}
+            className={`flex-1 py-2 text-sm font-medium rounded transition-all ${
+              authType === 'email' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Email
+          </button>
+          <button
+            type="button"
+            onClick={() => { setAuthType('phone'); setError(''); setPassword(''); setConfirm(''); setOtpSent(false); }}
+            className={`flex-1 py-2 text-sm font-medium rounded flex items-center justify-center gap-1 transition-all ${
+              authType === 'phone' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <Phone className="w-3.5 h-3.5" />
+            Phone
+          </button>
+        </div>
+
+        {/* Email Auth Form */}
+        {authType === 'email' && (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.edu"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+                className="h-12"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder={isSignup ? 'At least 8 characters' : 'Your password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete={isSignup ? 'new-password' : 'current-password'}
+                  className="h-12 pr-12"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+              {isSignup && (
+                <p className="text-xs text-slate-500 mt-2">
+                  Must contain: 8+ chars, uppercase, lowercase, special character (!@#$%^&*)
+                </p>
+              )}
+            </div>
+
+            {isSignup && (
+              <div className="space-y-2">
+                <Label htmlFor="confirm">Confirm password</Label>
+                <div className="relative">
+                  <Input
+                    id="confirm"
+                    type={showConfirm ? 'text' : 'password'}
+                    placeholder="Repeat your password"
+                    value={confirm}
+                    onChange={(e) => setConfirm(e.target.value)}
+                    required
+                    autoComplete="new-password"
+                    className="h-12 pr-12"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm(!showConfirm)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {showConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {error && (
+              <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-xl border border-red-100">
+                {error}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full"
+              disabled={loading || !email || !password || (isSignup && !confirm)}
+            >
+              {loading ? (isSignup ? 'Creating account…' : 'Logging in…') : (isSignup ? 'Create account' : 'Log in')}
+            </Button>
+          </form>
+        )}
+
+        {/* Phone Auth Form */}
+        {authType === 'phone' && (
+          <form onSubmit={otpSent ? handlePhoneVerifyOTP : handlePhoneRequestOTP} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone number</Label>
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="(555) 123-4567"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                disabled={otpSent}
+                required
+                className="h-12"
+              />
+            </div>
+
+            {otpSent && (
+              <div className="space-y-2">
+                <Label htmlFor="otp">Verification code</Label>
+                <Input
+                  id="otp"
+                  type="text"
+                  placeholder="000000"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  maxLength="6"
+                  required
+                  className="h-12 text-center text-lg font-mono tracking-widest"
+                />
+                <p className="text-xs text-slate-500">We sent a 6-digit code to your phone</p>
+              </div>
+            )}
+
+            {error && (
+              <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-xl border border-red-100">
+                {error}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full"
+              disabled={loading || !phoneNumber || (otpSent && !otp)}
+            >
+              {loading ? 'Sending…' : otpSent ? 'Verify code' : 'Send code'}
+            </Button>
+
+            {otpSent && (
+              <button
+                type="button"
+                onClick={() => { setOtpSent(false); setOtp(''); setError(''); }}
+                className="w-full text-sm text-slate-500 hover:text-slate-700"
+              >
+                Go back
+              </button>
+            )}
+          </form>
+        )}
+
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-slate-200"></div>
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="px-2 bg-white text-slate-500">or continue with</span>
           </div>
         </div>
 
-        <h1 className="text-3xl font-bold text-slate-900 text-center mb-2">
-          Sign in to WingRu
-        </h1>
-        <p className="text-slate-500 text-center mb-8 text-sm">
-          Enter any email to get started
+        <div id="google-button"></div>
+
+        <p className="mt-6 text-center text-xs text-slate-400">
+          {isSignup
+            ? 'Already have an account? '
+            : "Don't have an account? "}
+          <button
+            type="button"
+            onClick={() => switchMode(isSignup ? 'login' : 'signup')}
+            className="text-black hover:underline font-medium"
+          >
+            {isSignup ? 'Log in' : 'Sign up'}
+          </button>
         </p>
-
-        <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="off"
-              className="h-12"
-            />
-          </div>
-
-          {error && (
-            <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-xl border border-red-100">
-              {error}
-            </div>
-          )}
-
-          <Button type="submit" size="lg" className="w-full" disabled={loading || !email}>
-            {loading ? 'Signing in...' : 'Continue'}
-          </Button>
-        </form>
+        </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <AuthForm />
+    </Suspense>
   );
 }

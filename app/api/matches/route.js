@@ -1,94 +1,132 @@
-import { createServerSupabaseClient, createAdminClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import mongoose from 'mongoose';
+import { connectDB } from '@/lib/mongodb';
+import Match from '@/lib/models/Match';
+import Delegation from '@/lib/models/Delegation';
+import User from '@/lib/models/User';
+import { getSession } from '@/lib/auth';
 
-async function getAuthedUser(supabase) {
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) return null;
-  return user;
+function photoUrl(photo, userId) {
+  return photo.filename ? `/uploads/${userId}/${photo.filename}` : null;
 }
 
-// GET /api/matches?ownerId=<uuid>
+function serializeUser(u) {
+  const uid = u._id.toString();
+  return {
+    _id: uid,
+    name: u.name,
+    first_name: u.first_name,
+    last_name: u.last_name,
+    age: u.age,
+    school: u.school,
+    year: u.year,
+    major: u.major,
+    majors: u.majors,
+    personality_answer: u.personality_answer,
+    photos: (u.photos ?? [])
+      .sort((a, b) => a.position - b.position)
+      .map((ph) => ({
+        position: ph.position,
+        url: photoUrl(ph, uid),
+        prompt: ph.prompt,
+        prompt_answer: ph.prompt_answer,
+      })),
+    prompts: (u.photos ?? [])
+      .filter((ph) => ph.prompt)
+      .sort((a, b) => a.position - b.position)
+      .map((ph) => ({ prompt: ph.prompt, prompt_answer: ph.prompt_answer })),
+  };
+}
+
+// GET /api/matches?ownerId=<mongoId>
 export async function GET(request) {
-  const supabase = createServerSupabaseClient();
-  const user = await getAuthedUser(supabase);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const session = getSession(request);
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { searchParams } = new URL(request.url);
   const ownerId = searchParams.get('ownerId');
   if (!ownerId) return NextResponse.json({ error: 'ownerId required' }, { status: 400 });
 
-  const admin = createAdminClient();
+  // Validate ownerId is a valid ObjectId
+  if (!mongoose.Types.ObjectId.isValid(ownerId)) {
+    return NextResponse.json({ error: 'Invalid ownerId format' }, { status: 400 });
+  }
 
-  // Permission check: user must be owner OR an active delegate for owner
-  const isOwner = user.id === ownerId;
+  await connectDB();
+
+  // Permission check: must be owner or active delegate
+  const isOwner = session.sub === ownerId;
   let hasPermission = isOwner;
 
   if (!hasPermission) {
-    const { data: delegation } = await admin
-      .from('delegations')
-      .select('id')
-      .eq('owner_user_id', ownerId)
-      .eq('delegate_user_id', user.id)
-      .eq('status', 'active')
-      .single();
+    const delegation = await Delegation.findOne({
+      owner_user_id: ownerId,
+      delegate_user_id: session.sub,
+      status: 'active',
+    });
     hasPermission = !!delegation;
   }
 
-  if (!hasPermission) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  if (!hasPermission) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  // Fetch matches where owner is user_a or user_b
-  const { data: matchRows, error } = await admin
-    .from('matches')
-    .select('id, created_at, user_a, user_b')
-    .or(`user_a.eq.${ownerId},user_b.eq.${ownerId}`)
-    .order('created_at', { ascending: false });
+  const ownerOid = new mongoose.Types.ObjectId(ownerId);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const matchRows = await Match.find({
+    $or: [{ user_a: ownerOid }, { user_b: ownerOid }],
+  }).sort({ createdAt: -1 }).lean();
 
-  // Collect the other user IDs
-  const otherIds = (matchRows ?? []).map((m) => (m.user_a === ownerId ? m.user_b : m.user_a));
+  if (matchRows.length === 0) return NextResponse.json({ matches: [] });
 
-  if (otherIds.length === 0) return NextResponse.json({ matches: [] });
+  const otherIds = matchRows.map((m) =>
+    m.user_a.toString() === ownerId ? m.user_b : m.user_a
+  );
 
-  // Fetch their profiles + photos
-  const { data: profiles } = await admin
-    .from('profiles')
-    .select('id, name, age, year, major, photos(storage_path, position)')
-    .in('id', otherIds);
+  const profiles = await User.find({ _id: { $in: otherIds } })
+    .select('name first_name last_name age school year major majors personality_answer photos')
+    .lean();
 
   const profileMap = {};
-  (profiles ?? []).forEach((p) => {
-    profileMap[p.id] = {
-      ...p,
-      photos: (p.photos ?? [])
-        .sort((a, b) => a.position - b.position)
-        .map((ph) => ({
-          ...ph,
-          publicUrl: admin.storage.from('profile-photos').getPublicUrl(ph.storage_path).data.publicUrl,
-        })),
+  profiles.forEach((p) => { profileMap[p._id.toString()] = serializeUser(p); });
+
+  // Get delegate profiles for matchedBy
+  const delegateIds = matchRows.flatMap((m) => [
+    m.user_a_matched_by?.toString(),
+    m.user_b_matched_by?.toString(),
+  ]).filter(Boolean);
+  const uniqueDelegateIds = [...new Set(delegateIds)];
+
+  const delegates = uniqueDelegateIds.length
+    ? await User.find({ _id: { $in: uniqueDelegateIds } }).select('name photos').lean()
+    : [];
+  const delegateMap = {};
+  delegates.forEach((d) => {
+    const uid = d._id.toString();
+    const mainPhoto = d.photos?.sort((a, b) => a.position - b.position)?.[0];
+    delegateMap[uid] = {
+      name: d.name,
+      photo: mainPhoto ? photoUrl(mainPhoto, uid) : null,
     };
   });
 
-  // Get swipe tags if any
-  const { data: swipeRows } = await admin
-    .from('swipes')
-    .select('target_user_id, tag')
-    .eq('owner_user_id', ownerId)
-    .in('target_user_id', otherIds)
-    .eq('direction', 'right');
+  const matches = matchRows.map((m) => {
+    const isUserA = m.user_a.toString() === ownerId;
+    const otherId = isUserA ? m.user_b.toString() : m.user_a.toString();
 
-  const tagMap = {};
-  (swipeRows ?? []).forEach((s) => { tagMap[s.target_user_id] = s.tag; });
+    // Get status and friend note for this user
+    const myStatus = isUserA ? m.user_a_status : m.user_b_status;
+    const otherStatus = isUserA ? m.user_b_status : m.user_a_status;
+    const friendNote = isUserA ? m.user_a_friend_note : m.user_b_friend_note;
+    const matchedById = isUserA ? m.user_a_matched_by?.toString() : m.user_b_matched_by?.toString();
 
-  const matches = (matchRows ?? []).map((m) => {
-    const otherId = m.user_a === ownerId ? m.user_b : m.user_a;
     return {
-      match_id: m.id,
-      matched_at: m.created_at,
-      profile: profileMap[otherId] ?? { id: otherId },
-      tag: tagMap[otherId] ?? null,
+      _id: m._id.toString(),
+      matchedAt: m.createdAt,
+      profile: profileMap[otherId] ?? { _id: otherId },
+      friendNote: friendNote || null,
+      myStatus: myStatus || 'pending',
+      otherStatus: otherStatus || 'pending',
+      canChat: myStatus === 'accepted' && otherStatus === 'accepted',
+      matchedBy: matchedById ? delegateMap[matchedById] ?? null : null,
     };
   });
 

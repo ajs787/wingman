@@ -1,47 +1,72 @@
-import { createServerSupabaseClient, createAdminClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { connectDB } from '@/lib/mongodb';
+import Delegation from '@/lib/models/Delegation';
+import User from '@/lib/models/User';
+import { getSession } from '@/lib/auth';
 
-async function getAuthedUser(supabase) {
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) return null;
-  return user;
+function serializeUser(u) {
+  const uid = u._id.toString();
+  return {
+    _id: uid,
+    name: u.name,
+    netid: u.netid,
+    age: u.age,
+    year: u.year,
+    major: u.major,
+    personality_answer: u.personality_answer,
+    photos: (u.photos ?? [])
+      .sort((a, b) => a.position - b.position)
+      .map((p) => ({
+        position: p.position,
+        url: p.filename ? `/uploads/${uid}/${p.filename}` : null,
+        prompt: p.prompt,
+        prompt_answer: p.prompt_answer,
+      })),
+  };
 }
 
-// GET /api/delegations — list all active delegates for the current user (as owner)
-export async function GET() {
-  const supabase = createServerSupabaseClient();
-  const user = await getAuthedUser(supabase);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+// GET /api/delegations — delegates I manage (as owner) + owners I'm swiping for
+export async function GET(request) {
+  const session = getSession(request);
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from('delegations')
-    .select('id, status, created_at, delegate_user_id, profiles!delegations_delegate_user_id_fkey(id, name, netid)')
-    .eq('owner_user_id', user.id)
-    .eq('status', 'active');
+  await connectDB();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const [asDelegator, asDelegate] = await Promise.all([
+    Delegation.find({ owner_user_id: session.sub, status: 'active' })
+      .populate('delegate_user_id', 'name netid age year major personality_answer photos')
+      .lean(),
+    Delegation.find({ delegate_user_id: session.sub, status: 'active' })
+      .populate('owner_user_id', 'name netid age year major personality_answer photos')
+      .lean(),
+  ]);
 
-  // Also return owners that the current user is a delegate for
-  const { data: asDelegate } = await admin
-    .from('delegations')
-    .select('id, status, created_at, owner_user_id, profiles!delegations_owner_user_id_fkey(id, name, netid)')
-    .eq('delegate_user_id', user.id)
-    .eq('status', 'active');
+  const delegates = asDelegator.map((d) => ({
+    delegation_id: d._id.toString(),
+    status: d.status,
+    created_at: d.createdAt,
+    ...serializeUser(d.delegate_user_id),
+  }));
 
-  return NextResponse.json({ delegates: data ?? [], owners: asDelegate ?? [] });
+  const owners = asDelegate.map((d) => ({
+    delegation_id: d._id.toString(),
+    status: d.status,
+    created_at: d.createdAt,
+    ...serializeUser(d.owner_user_id),
+  }));
+
+  return NextResponse.json({ delegates, owners });
 }
 
 const revokeSchema = z.object({
-  delegation_id: z.number().int(),
+  delegation_id: z.string().min(1),
 });
 
 // DELETE /api/delegations — revoke a delegation (owner only)
 export async function DELETE(request) {
-  const supabase = createServerSupabaseClient();
-  const user = await getAuthedUser(supabase);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const session = getSession(request);
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   let body;
   try { body = await request.json(); } catch {
@@ -51,25 +76,17 @@ export async function DELETE(request) {
   const parsed = revokeSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid delegation_id' }, { status: 422 });
 
-  const admin = createAdminClient();
-
-  // Verify ownership before revoke
-  const { data: delegation } = await admin
-    .from('delegations')
-    .select('id, owner_user_id')
-    .eq('id', parsed.data.delegation_id)
-    .single();
+  await connectDB();
+  const delegation = await Delegation.findById(parsed.data.delegation_id);
 
   if (!delegation) return NextResponse.json({ error: 'Delegation not found' }, { status: 404 });
-  if (delegation.owner_user_id !== user.id) {
+  if (delegation.owner_user_id.toString() !== session.sub) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const { error } = await admin
-    .from('delegations')
-    .update({ status: 'revoked' })
-    .eq('id', parsed.data.delegation_id);
+  delegation.status = 'revoked';
+  await delegation.save();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }
+

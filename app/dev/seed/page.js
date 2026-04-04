@@ -54,7 +54,7 @@ export default function DevSeedPage() {
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
           <p className="text-amber-700 text-sm font-medium">⚠️ Development only</p>
           <p className="text-amber-600 text-xs mt-1">
-            This will create dummy auth users and profiles in your Supabase project.
+            This will create dummy users and profiles in your local development database.
           </p>
         </div>
 

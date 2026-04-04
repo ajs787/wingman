@@ -11,28 +11,22 @@ import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { useDropzone } from 'react-dropzone';
-import { ArrowLeft, ArrowRight, Upload, X, GripVertical, Check } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Upload, X, GripVertical, Check, Copy, Bird, Plus } from 'lucide-react';
+import {
+  US_COLLEGES,
+  COMMON_MAJORS,
+  CLASS_YEARS,
+  AGES,
+  GENDERS,
+  LOOKING_FOR,
+  PERSONALITY_OPTIONS,
+  CUISINE_OPTIONS,
+  RACE_ETHNICITY_OPTIONS,
+  SUBSTANCE_USE_OPTIONS,
+  PROFILE_PROMPTS,
+} from '@/lib/constants';
 
 const TOTAL_STEPS = 5;
-
-const YEARS = ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Graduate', 'Other'];
-const GENDERS = ['Man', 'Woman', 'Non-binary', 'Prefer not to say', 'Other'];
-const LOOKING_FOR = ['Men', 'Women', 'Everyone', 'Non-binary people'];
-const PERSONALITY_OPTIONS = [
-  'Early bird 🌅',
-  'Night owl 🦉',
-  'Introvert 🏡',
-  'Extrovert 🎉',
-  'Ambivert ⚖️',
-];
-
-const SAMPLE_PROMPTS = [
-  "My go-to stress reliever...",
-  "The way to my heart is...",
-  "We'll get along if...",
-  "My most controversial opinion...",
-  "I'm secretly really good at...",
-];
 
 function PhotoSlot({ index, photo, onUpload, onRemove }) {
   const onDrop = useCallback((files) => {
@@ -51,7 +45,7 @@ function PhotoSlot({ index, photo, onUpload, onRemove }) {
     <div
       {...(photo ? {} : getRootProps())}
       className={`relative aspect-[3/4] rounded-2xl border-2 overflow-hidden transition-all cursor-pointer
-        ${photo ? 'border-transparent' : isDragActive ? 'border-rose-400 bg-rose-50' : 'border-dashed border-slate-200 bg-slate-50 hover:border-rose-300 hover:bg-rose-50/30'}`}
+        ${photo ? 'border-transparent' : isDragActive ? 'border-gray-400 bg-gray-50' : 'border-dashed border-slate-200 bg-slate-50 hover:border-gray-300 hover:bg-gray-50/30'}`}
     >
       {!photo && <input {...getInputProps()} />}
       {photo ? (
@@ -88,30 +82,36 @@ function PhotoSlot({ index, photo, onUpload, onRemove }) {
   );
 }
 
-function getCurrentNetid() {
-  try {
-    const u = JSON.parse(localStorage.getItem('wingru_current_user') || '{}');
-    return u.netid || 'default';
-  } catch { return 'default'; }
-}
-
 export default function OnboardingPage() {
   const router = useRouter();
   const { toast } = useToast();
 
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
+  const [inviteCode, setInviteCode] = useState('');
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   // Step 1 — Basic info
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [age, setAge] = useState('');
+  const [school, setSchool] = useState('');
+  const [customSchool, setCustomSchool] = useState('');
   const [year, setYear] = useState('');
-  const [major, setMajor] = useState('');
+  const [majors, setMajors] = useState(['']);
+  const [minors, setMinors] = useState([]);
+  const [customMajor, setCustomMajor] = useState('');
   const [gender, setGender] = useState('');
   const [lookingFor, setLookingFor] = useState('');
 
-  // Step 2 — Personality
+  // Step 2 — Personality & Cuisine
   const [personalityAnswer, setPersonalityAnswer] = useState('');
+  const [favoriteCuisines, setFavoriteCuisines] = useState([]);
+  const [raceEthnicities, setRaceEthnicities] = useState([]);
+  const [raceEthnicityToAdd, setRaceEthnicityToAdd] = useState('');
+  const [alcoholUse, setAlcoholUse] = useState('');
+  const [weedUse, setWeedUse] = useState('');
+  const [drugUse, setDrugUse] = useState('');
 
   // Step 3 — Photos (5 slots)
   const [photos, setPhotos] = useState(Array(5).fill(null));
@@ -120,62 +120,65 @@ export default function OnboardingPage() {
   const [promptSelections, setPromptSelections] = useState([
     { prompt: '', answer: '' },
     { prompt: '', answer: '' },
+    { prompt: '', answer: '' },
   ]);
 
-  // Load saved data from localStorage on mount (per-user keys)
+  // Load existing profile on mount
   useEffect(() => {
-    try {
-      const netid = getCurrentNetid();
-      const savedProfile = localStorage.getItem(`wingru_profile_${netid}`);
-      if (savedProfile) {
-        const p = JSON.parse(savedProfile);
-        if (p.name) setName(p.name);
-        if (p.age) setAge(String(p.age));
-        if (p.year) setYear(p.year);
-        if (p.major) setMajor(p.major);
-        if (p.gender) setGender(p.gender);
-        if (p.looking_for) setLookingFor(p.looking_for);
-        if (p.personality_answer) setPersonalityAnswer(p.personality_answer);
-        if (p.prompts) setPromptSelections(p.prompts);
-      }
-
-      const savedPhotos = localStorage.getItem(`wingru_photos_${netid}`);
-      if (savedPhotos) {
-        const parsed = JSON.parse(savedPhotos);
-        if (Array.isArray(parsed)) {
-          setPhotos(parsed.map((d) => d ? { dataUrl: d } : null));
+    async function loadProfile() {
+      try {
+        const res = await fetch('/api/profile');
+        if (!res.ok) return;
+        const { profile } = await res.json();
+        if (!profile) return;
+        if (profile.first_name) setFirstName(profile.first_name);
+        if (profile.last_name) setLastName(profile.last_name);
+        if (profile.age) setAge(String(profile.age));
+        if (profile.school) setSchool(profile.school);
+        if (profile.year) setYear(profile.year);
+        if (profile.majors?.length) setMajors(profile.majors);
+        if (profile.minors?.length) setMinors(profile.minors);
+        if (profile.gender) setGender(profile.gender);
+        if (profile.looking_for) setLookingFor(profile.looking_for);
+        if (profile.personality_answer) setPersonalityAnswer(profile.personality_answer);
+        if (Array.isArray(profile.favorite_cuisines) && profile.favorite_cuisines.length) {
+          setFavoriteCuisines(profile.favorite_cuisines.slice(0, 3));
+        } else if (profile.favorite_cuisine) {
+          setFavoriteCuisines([profile.favorite_cuisine]);
         }
+        if (profile.race_ethnicities?.length) setRaceEthnicities(profile.race_ethnicities);
+        if (profile.alcohol_use) setAlcoholUse(profile.alcohol_use);
+        if (profile.weed_use) setWeedUse(profile.weed_use);
+        if (profile.drug_use) setDrugUse(profile.drug_use);
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore parse errors
     }
+    loadProfile();
   }, []);
 
   function canProceedStep1() {
-    return name.trim() && age && parseInt(age) >= 17 && year && major.trim() && gender && lookingFor;
+    const hasSchool = school === 'Other' ? customSchool.trim() : school;
+    const hasOneMajor = majors.some(m => m.trim() || customMajor.trim());
+    return firstName.trim() && lastName.trim() && age && hasSchool && year && hasOneMajor && gender && lookingFor;
   }
   function canProceedStep2() {
-    return personalityAnswer.trim().length > 0;
+    return true;
   }
   function canProceedStep3() {
-    return photos.filter(Boolean).length === 5;
+    return photos.filter((p) => p?.file || p?.existing).length === 5;
   }
   function canProceedStep4() {
     const filled = promptSelections.filter((p) => p.prompt && p.answer.trim().length > 0);
-    return filled.length >= 2;
+    return filled.length >= 3;
   }
 
   function handlePhotoUpload(index, file) {
     const reader = new FileReader();
     reader.onload = (e) => {
-      const dataUrl = e.target.result;
       setPhotos((prev) => {
         const next = [...prev];
-        next[index] = { dataUrl };
-        try {
-          const netid = getCurrentNetid();
-          localStorage.setItem(`wingru_photos_${netid}`, JSON.stringify(next.map((p) => p ? p.dataUrl : null)));
-        } catch {}
+        next[index] = { file, dataUrl: e.target.result };
         return next;
       });
     };
@@ -186,99 +189,292 @@ export default function OnboardingPage() {
     setPhotos((prev) => {
       const next = [...prev];
       next[index] = null;
-      try {
-        const netid = getCurrentNetid();
-        localStorage.setItem(`wingru_photos_${netid}`, JSON.stringify(next.map((p) => p ? p.dataUrl : null)));
-      } catch {}
       return next;
     });
   }
 
-  function handleSaveProfile() {
-    const netid = getCurrentNetid();
-    const profile = {
-      name: name.trim(),
-      age: parseInt(age),
-      year,
-      major: major.trim(),
-      gender,
-      looking_for: lookingFor,
-      personality_answer: personalityAnswer.trim(),
-      prompts: promptSelections,
-    };
-    try {
-      localStorage.setItem(`wingru_profile_${netid}`, JSON.stringify(profile));
-    } catch {}
-    return true;
+  function addMajor() {
+    if (majors.length < 3) setMajors([...majors, '']);
+  }
+  function removeMajor(index) {
+    setMajors(majors.filter((_, i) => i !== index));
+  }
+  function updateMajor(index, value) {
+    const next = [...majors];
+    next[index] = value;
+    setMajors(next);
   }
 
-  function handleFinish() {
+  function addMinor() {
+    if (minors.length < 3) setMinors([...minors, '']);
+  }
+  function removeMinor(index) {
+    setMinors(minors.filter((_, i) => i !== index));
+  }
+  function updateMinor(index, value) {
+    const next = [...minors];
+    next[index] = value;
+    setMinors(next);
+  }
+
+  async function handleFinish() {
     setSaving(true);
-    handleSaveProfile();
-    toast({ title: 'Profile complete!', description: 'Welcome to WingRu.' });
-    router.push('/feed');
+    try {
+      const finalSchool = school === 'Other' ? customSchool.trim() : school;
+      const finalMajors = majors.filter(m => m.trim()).map(m => m === 'Other' ? customMajor.trim() : m).filter(Boolean);
+      const finalMinors = minors.filter(m => m.trim());
+      const fullName = `${firstName.trim()} ${lastName.trim()}`;
+
+      // 1. Save profile fields
+      const profileRes = await fetch('/api/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          name: fullName,
+          age: parseInt(age),
+          school: finalSchool,
+          year,
+          majors: finalMajors,
+          minors: finalMinors,
+          major: finalMajors[0] || '', // backwards compat
+          gender,
+          looking_for: lookingFor,
+          personality_answer: personalityAnswer.trim() || null,
+          favorite_cuisine: favoriteCuisines[0] || null,
+          favorite_cuisines: favoriteCuisines,
+          race_ethnicities: raceEthnicities,
+          alcohol_use: alcoholUse || null,
+          weed_use: weedUse || null,
+          drug_use: drugUse || null,
+        }),
+      });
+      if (!profileRes.ok) {
+        const { error } = await profileRes.json();
+        toast({ title: 'Error saving profile', description: error, variant: 'destructive' });
+        return;
+      }
+
+      // 2. Upload new photos
+      for (let i = 0; i < photos.length; i++) {
+        const p = photos[i];
+        if (p?.file) {
+          const promptEl = promptSelections[i];
+          const fd = new FormData();
+          fd.append('file', p.file);
+          fd.append('position', String(i));
+          if (promptEl?.prompt) fd.append('prompt', promptEl.prompt);
+          if (promptEl?.answer) fd.append('prompt_answer', promptEl.answer);
+          await fetch('/api/photos', { method: 'POST', body: fd });
+        }
+      }
+
+      // 3. Auto-generate invite code
+      const inviteRes = await fetch('/api/invite/auto-generate', { method: 'POST' });
+      if (inviteRes.ok) {
+        const { invite } = await inviteRes.json();
+        setInviteCode(invite.code);
+        setShowInviteModal(true);
+      } else {
+        router.push('/feed');
+      }
+    } catch {
+      toast({ title: 'Something went wrong.', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   }
 
   const stepProgress = Math.round((step / TOTAL_STEPS) * 100);
+
+  function toggleCuisine(cuisine) {
+    setFavoriteCuisines((prev) => {
+      if (prev.includes(cuisine)) return prev.filter((item) => item !== cuisine);
+      if (prev.length >= 3) return prev;
+      return [...prev, cuisine];
+    });
+  }
+
+  function toggleRaceEthnicity(option) {
+    if (!option) return;
+    setRaceEthnicities((prev) => (prev.includes(option) ? prev : [...prev, option]));
+    setRaceEthnicityToAdd('');
+  }
+
+  function copyToClipboard() {
+    navigator.clipboard.writeText(inviteCode);
+    toast({ title: 'Code copied!', description: 'Your invite code is in your clipboard.' });
+  }
+
+  function proceedToFeed() {
+    setShowInviteModal(false);
+    router.push('/feed');
+  }
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
       {/* Header */}
       <div className="px-6 pt-8 pb-4 max-w-lg mx-auto w-full">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-lg font-bold text-rose-500">WingRu</span>
+          <div className="flex items-center gap-1">
+            <Bird className="w-5 h-5 text-black" />
+            <span className="text-lg font-bold text-black">Penguin</span>
+          </div>
           <span className="text-sm text-slate-400">Step {step} of {TOTAL_STEPS}</span>
         </div>
         <Progress value={stepProgress} className="h-1.5" />
       </div>
 
       {/* Content */}
-      <div className="flex-1 px-6 max-w-lg mx-auto w-full animate-fade-in">
+      <div className="flex-1 px-6 max-w-lg mx-auto w-full animate-fade-in overflow-y-auto">
         {step === 1 && (
-          <div className="space-y-6 py-6">
+          <div className="space-y-5 py-6">
             <div>
               <h2 className="text-2xl font-bold text-slate-900">Let's build your profile</h2>
               <p className="text-slate-500 mt-1">Basic info your friends will use to swipe for you.</p>
+              <p className="text-xs text-slate-400 mt-2">All selections are editable later in your profile settings.</p>
             </div>
             <div className="space-y-4">
-              <div>
-                <Label htmlFor="name">Full name</Label>
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Alex Johnson" className="mt-1" />
+              {/* Name fields */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="firstName">First name</Label>
+                  <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Alex" className="mt-1" />
+                </div>
+                <div>
+                  <Label htmlFor="lastName">Last name</Label>
+                  <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Johnson" className="mt-1" />
+                </div>
               </div>
+
+              {/* Age dropdown */}
               <div>
-                <Label htmlFor="age">Age</Label>
-                <Input id="age" type="number" min="17" max="99" value={age} onChange={(e) => setAge(e.target.value)} placeholder="21" className="mt-1 w-28" />
-              </div>
-              <div>
-                <Label>Year at Rutgers</Label>
-                <Select value={year} onValueChange={setYear}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select year" /></SelectTrigger>
+                <Label>Age</Label>
+                <Select value={age} onValueChange={setAge}>
+                  <SelectTrigger className="mt-1 w-28"><SelectValue placeholder="Age" /></SelectTrigger>
                   <SelectContent>
-                    {YEARS.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+                    {AGES.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* School dropdown */}
               <div>
-                <Label htmlFor="major">Major</Label>
-                <Input id="major" value={major} onChange={(e) => setMajor(e.target.value)} placeholder="Computer Science" className="mt-1" />
+                <Label>School</Label>
+                <Select value={school} onValueChange={setSchool}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select your school" /></SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {US_COLLEGES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+                {school === 'Other' && (
+                  <Input
+                    value={customSchool}
+                    onChange={(e) => setCustomSchool(e.target.value)}
+                    placeholder="Enter your school name"
+                    className="mt-2"
+                  />
+                )}
               </div>
+
+              {/* Class Year */}
+              <div>
+                <Label>Class Year</Label>
+                <Select value={year} onValueChange={setYear}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select year" /></SelectTrigger>
+                  <SelectContent>
+                    {CLASS_YEARS.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Majors */}
+              <div>
+                <Label>Major(s)</Label>
+                {majors.map((major, i) => (
+                  <div key={i} className="flex gap-2 mt-1">
+                    <Select value={major} onValueChange={(v) => updateMajor(i, v)}>
+                      <SelectTrigger className="flex-1"><SelectValue placeholder="Select major" /></SelectTrigger>
+                      <SelectContent className="max-h-60">
+                        {COMMON_MAJORS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {majors.length > 1 && (
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeMajor(i)}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                {majors.some(m => m === 'Other') && (
+                  <Input
+                    value={customMajor}
+                    onChange={(e) => setCustomMajor(e.target.value)}
+                    placeholder="Enter your major"
+                    className="mt-2"
+                  />
+                )}
+                {majors.length < 3 && (
+                  <button type="button" onClick={addMajor} className="text-sm text-black hover:underline mt-2 flex items-center gap-1">
+                    <Plus className="w-3 h-3" /> Add another major
+                  </button>
+                )}
+              </div>
+
+              {/* Minors */}
+              <div>
+                <Label>Minor(s) <span className="text-slate-400 font-normal">(optional)</span></Label>
+                {minors.length === 0 ? (
+                  <button type="button" onClick={addMinor} className="text-sm text-black hover:underline mt-1 flex items-center gap-1">
+                    <Plus className="w-3 h-3" /> Add a minor
+                  </button>
+                ) : (
+                  <>
+                    {minors.map((minor, i) => (
+                      <div key={i} className="flex gap-2 mt-1">
+                        <Select value={minor} onValueChange={(v) => updateMinor(i, v)}>
+                          <SelectTrigger className="flex-1"><SelectValue placeholder="Select minor" /></SelectTrigger>
+                          <SelectContent className="max-h-60">
+                            {COMMON_MAJORS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => removeMinor(i)}>
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    {minors.length < 3 && (
+                      <button type="button" onClick={addMinor} className="text-sm text-black hover:underline mt-2 flex items-center gap-1">
+                        <Plus className="w-3 h-3" /> Add another minor
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Gender */}
               <div>
                 <Label>Gender</Label>
                 <div className="flex flex-wrap gap-2 mt-1">
                   {GENDERS.map((g) => (
                     <button key={g} type="button" onClick={() => setGender(g)}
-                      className={`px-4 py-2 rounded-xl border text-sm font-medium transition-colors ${gender === g ? 'bg-rose-500 text-white border-rose-500' : 'border-slate-200 text-slate-600 hover:border-rose-300'}`}>
+                      className={`px-4 py-2 rounded-xl border text-sm font-medium transition-colors ${gender === g ? 'bg-black text-white border-gray-500' : 'border-slate-200 text-slate-600 hover:border-gray-300'}`}>
                       {g}
                     </button>
                   ))}
                 </div>
               </div>
+
+              {/* Looking for */}
               <div>
                 <Label>Looking for</Label>
                 <div className="flex flex-wrap gap-2 mt-1">
                   {LOOKING_FOR.map((l) => (
                     <button key={l} type="button" onClick={() => setLookingFor(l)}
-                      className={`px-4 py-2 rounded-xl border text-sm font-medium transition-colors ${lookingFor === l ? 'bg-rose-500 text-white border-rose-500' : 'border-slate-200 text-slate-600 hover:border-rose-300'}`}>
+                      className={`px-4 py-2 rounded-xl border text-sm font-medium transition-colors ${lookingFor === l ? 'bg-black text-white border-gray-500' : 'border-slate-200 text-slate-600 hover:border-gray-300'}`}>
                       {l}
                     </button>
                   ))}
@@ -289,21 +485,114 @@ export default function OnboardingPage() {
         )}
 
         {step === 2 && (
-          <div className="space-y-6 py-6">
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900">What's your vibe?</h2>
-              <p className="text-slate-500 mt-1">Pick one that best describes you.</p>
+          <div className="space-y-8 py-6">
+            {/* Personality Type */}
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">
+                  What's your personality type? <span className="text-sm font-normal text-slate-400">(optional)</span>
+                </h2>
+                <p className="text-slate-500 mt-1">Pick one that best describes you.</p>
+              </div>
+              <div className="space-y-3">
+                {PERSONALITY_OPTIONS.map((opt) => (
+                  <button key={opt} type="button" onClick={() => setPersonalityAnswer(opt)}
+                    className={`w-full text-left px-5 py-4 rounded-2xl border-2 text-sm font-medium transition-all ${personalityAnswer === opt ? 'border-gray-500 bg-gray-50 text-slate-800' : 'border-slate-100 text-slate-700 hover:border-slate-200 bg-white'}`}>
+                    <div className="flex items-center justify-between">
+                      {opt}
+                      {personalityAnswer === opt && <Check className="w-4 h-4 text-black" />}
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
+
+            {/* Favorite Cuisine */}
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">
+                  Favorite Cuisine? <span className="text-sm font-normal text-slate-400">(optional)</span>
+                </h2>
+                <p className="text-slate-500 mt-1">Select 1–3 cuisines you love.</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {CUISINE_OPTIONS.map((cuisine) => (
+                  <button key={cuisine} type="button" onClick={() => toggleCuisine(cuisine)}
+                    className={`px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all ${favoriteCuisines.includes(cuisine) ? 'border-gray-500 bg-gray-50 text-slate-800' : 'border-slate-100 text-slate-700 hover:border-slate-200 bg-white'}`}>
+                    <div className="flex items-center justify-between">
+                      {cuisine}
+                      {favoriteCuisines.includes(cuisine) && <Check className="w-3 h-3 text-black" />}
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-slate-400">{favoriteCuisines.length}/3 selected</p>
+            </div>
+
             <div className="space-y-3">
-              {PERSONALITY_OPTIONS.map((opt) => (
-                <button key={opt} type="button" onClick={() => setPersonalityAnswer(opt)}
-                  className={`w-full text-left px-5 py-4 rounded-2xl border-2 text-sm font-medium transition-all ${personalityAnswer === opt ? 'border-rose-500 bg-rose-50 text-rose-700' : 'border-slate-100 text-slate-700 hover:border-slate-200 bg-white'}`}>
-                  <div className="flex items-center justify-between">
-                    {opt}
-                    {personalityAnswer === opt && <Check className="w-4 h-4 text-rose-500" />}
-                  </div>
-                </button>
-              ))}
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">
+                  Race & ethnicity <span className="text-sm font-normal text-slate-400">(optional)</span>
+                </h2>
+                <p className="text-slate-500 mt-1">Select all that apply.</p>
+              </div>
+              <div className="space-y-2">
+                <Select value={raceEthnicityToAdd} onValueChange={toggleRaceEthnicity}>
+                  <SelectTrigger><SelectValue placeholder="Choose a race/ethnicity" /></SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {RACE_ETHNICITY_OPTIONS.map((option) => (
+                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {raceEthnicities.map((option) => (
+                  <span key={option} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 text-xs">
+                    {option}
+                    <button type="button" onClick={() => setRaceEthnicities((prev) => prev.filter((item) => item !== option))}>
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">
+                  Drugs, weed, or alcohol use <span className="text-sm font-normal text-slate-400">(optional)</span>
+                </h2>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <Label>Alcohol</Label>
+                  <Select value={alcoholUse} onValueChange={setAlcoholUse}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="Select alcohol use" /></SelectTrigger>
+                    <SelectContent>
+                      {SUBSTANCE_USE_OPTIONS.map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Weed</Label>
+                  <Select value={weedUse} onValueChange={setWeedUse}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="Select weed use" /></SelectTrigger>
+                    <SelectContent>
+                      {SUBSTANCE_USE_OPTIONS.map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Drugs</Label>
+                  <Select value={drugUse} onValueChange={setDrugUse}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="Select drug use" /></SelectTrigger>
+                    <SelectContent>
+                      {SUBSTANCE_USE_OPTIONS.map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -327,7 +616,7 @@ export default function OnboardingPage() {
           <div className="space-y-6 py-6">
             <div>
               <h2 className="text-2xl font-bold text-slate-900">Add your prompts</h2>
-              <p className="text-slate-500 mt-1">Answer at least 2 prompts so people get to know you.</p>
+              <p className="text-slate-500 mt-1">Answer at least 3 prompts so people get to know you.</p>
             </div>
             {promptSelections.map((ps, i) => (
               <div key={i} className="space-y-2 p-4 rounded-2xl border border-slate-100 bg-slate-50">
@@ -337,7 +626,7 @@ export default function OnboardingPage() {
                 }}>
                   <SelectTrigger><SelectValue placeholder="Pick a prompt..." /></SelectTrigger>
                   <SelectContent>
-                    {SAMPLE_PROMPTS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                    {PROFILE_PROMPTS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 {ps.prompt && (
@@ -350,9 +639,9 @@ export default function OnboardingPage() {
                 )}
               </div>
             ))}
-            {promptSelections.length < 3 && (
+            {promptSelections.length < 5 && (
               <button type="button" onClick={() => setPromptSelections([...promptSelections, { prompt: '', answer: '' }])}
-                className="text-sm text-rose-500 hover:underline">
+                className="text-sm text-black hover:underline">
                 + Add another prompt
               </button>
             )}
@@ -362,22 +651,29 @@ export default function OnboardingPage() {
         {step === 5 && (
           <div className="space-y-6 py-6">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">Looking good, {name}!</h2>
+              <h2 className="text-2xl font-bold text-slate-900">Looking good, {firstName}!</h2>
               <p className="text-slate-500 mt-1">Review your profile and hit Done to get started.</p>
             </div>
             <div className="space-y-3 text-sm">
               {[
-                { label: 'Name', value: name },
+                { label: 'Name', value: `${firstName} ${lastName}` },
                 { label: 'Age', value: age },
-                { label: 'Year', value: year },
-                { label: 'Major', value: major },
+                { label: 'School', value: school === 'Other' ? customSchool : school },
+                { label: 'Class Year', value: year },
+                { label: 'Major(s)', value: majors.filter(Boolean).map(m => m === 'Other' ? customMajor : m).join(', ') },
+                { label: 'Minor(s)', value: minors.filter(Boolean).join(', ') || 'None' },
                 { label: 'Gender', value: gender },
                 { label: 'Looking for', value: lookingFor },
-                { label: 'Vibe', value: personalityAnswer },
+                { label: 'Personality', value: personalityAnswer || 'Skipped' },
+                { label: 'Favorite Cuisine(s)', value: favoriteCuisines.join(', ') || 'Skipped' },
+                { label: 'Race & ethnicity', value: raceEthnicities.join(', ') || 'Skipped' },
+                { label: 'Alcohol use', value: alcoholUse || 'Skipped' },
+                { label: 'Weed use', value: weedUse || 'Skipped' },
+                { label: 'Drugs use', value: drugUse || 'Skipped' },
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between py-2 border-b border-slate-100">
                   <span className="text-slate-500">{label}</span>
-                  <span className="font-medium text-slate-800">{value}</span>
+                  <span className="font-medium text-slate-800 text-right max-w-[60%]">{value}</span>
                 </div>
               ))}
               <div className="py-2">
@@ -420,6 +716,36 @@ export default function OnboardingPage() {
           </Button>
         )}
       </div>
+
+      {/* Invite Code Modal */}
+      {showInviteModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-6">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-lg space-y-6">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-bold text-slate-900">Your invite code is ready!</h2>
+              <p className="text-slate-500">Share this code with friends — they can use it to swipe for you.</p>
+            </div>
+
+            <div className="bg-slate-50 rounded-xl p-6 space-y-4">
+              <p className="text-xs text-slate-500 text-center">YOUR INVITE CODE</p>
+              <p className="text-center font-mono text-3xl font-bold text-slate-900 tracking-widest">{inviteCode}</p>
+              <p className="text-xs text-slate-400 text-center">Expires in 10 minutes</p>
+            </div>
+
+            <button
+              onClick={copyToClipboard}
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium transition-colors"
+            >
+              <Copy className="w-4 h-4" />
+              Copy code
+            </button>
+
+            <Button onClick={proceedToFeed} size="lg" className="w-full">
+              Continue to feed
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

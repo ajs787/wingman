@@ -1,51 +1,40 @@
-import { createServerSupabaseClient, createAdminClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import { connectDB } from '@/lib/mongodb';
+import InviteCode from '@/lib/models/InviteCode';
+import { getSession } from '@/lib/auth';
+import { generateInviteCode } from '@/lib/utils';
 
-async function getAuthedUser(supabase) {
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) return null;
-  return user;
-}
+export async function POST(request) {
+  const session = getSession(request);
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-function generateCode(len = 8) {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let code = '';
-  for (let i = 0; i < len; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return code;
-}
+  await connectDB();
 
-export async function POST() {
-  const supabase = createServerSupabaseClient();
-  const user = await getAuthedUser(supabase);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  // Delete old unused codes for this user
+  await InviteCode.deleteMany({
+    owner_user_id: session.sub,
+    uses: 0,
+    expires_at: { $lt: new Date() },
+  });
 
-  const admin = createAdminClient();
+  const code = generateInviteCode();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
 
-  // Expire old unused codes for this user
-  await admin
-    .from('invite_codes')
-    .update({ uses: 1 }) // mark as used/expired by forcing uses = max_uses
-    .eq('owner_user_id', user.id)
-    .lt('uses', 1)
-    .lt('expires_at', new Date().toISOString());
+  const invite = await InviteCode.create({
+    code,
+    owner_user_id: session.sub,
+    expires_at: expiresAt,
+    max_uses: 1,
+    uses: 0,
+  });
 
-  const code = generateCode();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 min
-
-  const { data, error } = await admin
-    .from('invite_codes')
-    .insert({
-      code,
-      owner_user_id: user.id,
-      expires_at: expiresAt,
-      max_uses: 1,
-      uses: 0,
-    })
-    .select()
-    .single();
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ invite: data });
+  return NextResponse.json({
+    invite: {
+      id: invite._id.toString(),
+      code: invite.code,
+      expires_at: invite.expires_at,
+      max_uses: invite.max_uses,
+      uses: invite.uses,
+    },
+  });
 }

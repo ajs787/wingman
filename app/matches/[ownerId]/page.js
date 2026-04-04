@@ -12,17 +12,17 @@ import Link from 'next/link';
 import { ArrowLeft, Heart, ChevronRight } from 'lucide-react';
 
 function MatchCard({ match }) {
-  const { profile, tag, matched_at } = match;
+  const { profile, tag, matchedAt } = match;
   const mainPhoto = profile?.photos?.[0];
 
   return (
-    <div className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 hover:border-rose-100 hover:bg-rose-50/10 transition-all">
+    <div className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 hover:border-gray-100 hover:bg-gray-50/10 transition-all">
       <div className="relative w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0 bg-slate-100">
-        {mainPhoto?.publicUrl ? (
-          <Image src={mainPhoto.publicUrl} alt={profile.name} fill className="object-cover" />
+        {mainPhoto?.url ? (
+          <Image src={mainPhoto.url} alt={profile.name} fill className="object-cover" />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-rose-100 to-pink-100">
-            <span className="text-2xl font-bold text-rose-300">{profile?.name?.[0]}</span>
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-600">
+            <span className="text-2xl font-bold text-gray-400">{profile?.name?.[0]}</span>
           </div>
         )}
       </div>
@@ -37,9 +37,9 @@ function MatchCard({ match }) {
       </div>
       <div className="text-right flex-shrink-0">
         <p className="text-xs text-slate-400">
-          {new Date(matched_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          {matchedAt ? new Date(matchedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
         </p>
-        <Heart className="w-4 h-4 text-rose-300 mx-auto mt-1" />
+        <Heart className="w-4 h-4 text-gray-400 mx-auto mt-1" />
       </div>
     </div>
   );
@@ -131,7 +131,7 @@ export default function MatchesPage() {
 
         {!loading && !error && matches.length === 0 && (
           <div className="text-center py-16 rounded-2xl bg-slate-50 border border-dashed border-slate-200">
-            <Heart className="w-10 h-10 text-rose-100 mx-auto mb-3" />
+            <Heart className="w-10 h-10 text-gray-200 mx-auto mb-3" />
             <p className="text-slate-500 font-medium">No matches yet</p>
             <p className="text-slate-400 text-sm mt-1 mb-4">
               Keep swiping! Matches form when both sides right-swipe each other.
