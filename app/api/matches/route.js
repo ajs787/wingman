@@ -5,6 +5,7 @@ import Match from '@/lib/models/Match';
 import Delegation from '@/lib/models/Delegation';
 import User from '@/lib/models/User';
 import { getSession } from '@/lib/auth';
+import { getBlockedUserIds } from '@/lib/safety/blocking';
 
 function photoUrl(photo, userId) {
   return photo.filename ? `/uploads/${userId}/${photo.filename}` : null;
@@ -70,9 +71,20 @@ export async function GET(request) {
   if (!hasPermission) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const ownerOid = new mongoose.Types.ObjectId(ownerId);
+  const blocked = await getBlockedUserIds(ownerId);
+  const blockedObjectIds = blocked.allBlockedIds
+    .filter((id) => mongoose.Types.ObjectId.isValid(id))
+    .map((id) => new mongoose.Types.ObjectId(id));
 
   const matchRows = await Match.find({
+    status: { $ne: 'blocked' },
     $or: [{ user_a: ownerOid }, { user_b: ownerOid }],
+    ...(blockedObjectIds.length
+      ? {
+          user_a: { $nin: blockedObjectIds },
+          user_b: { $nin: blockedObjectIds },
+        }
+      : {}),
   }).sort({ createdAt: -1 }).lean();
 
   if (matchRows.length === 0) return NextResponse.json({ matches: [] });

@@ -5,6 +5,7 @@ import Match from '@/lib/models/Match';
 import Message from '@/lib/models/Message';
 import User from '@/lib/models/User';
 import { getSession } from '@/lib/auth';
+import { getBlockedUserIds } from '@/lib/safety/blocking';
 
 function photoUrl(photo, userId) {
   return photo.filename ? `/uploads/${userId}/${photo.filename}` : null;
@@ -18,12 +19,31 @@ export async function GET(request) {
   await connectDB();
 
   const userId = new mongoose.Types.ObjectId(session.sub);
+  const blocked = await getBlockedUserIds(session.sub);
+  const blockedObjectIds = blocked.allBlockedIds
+    .filter((id) => mongoose.Types.ObjectId.isValid(id))
+    .map((id) => new mongoose.Types.ObjectId(id));
 
   // Find all matches where both users have accepted
   const matches = await Match.find({
     $or: [{ user_a: userId }, { user_b: userId }],
     user_a_status: 'accepted',
     user_b_status: 'accepted',
+    $and: [
+      {
+        $or: [
+          { status: 'active' },
+          { status: { $exists: false } },
+          { status: null },
+        ],
+      },
+    ],
+    ...(blockedObjectIds.length
+      ? {
+          user_a: { $nin: blockedObjectIds },
+          user_b: { $nin: blockedObjectIds },
+        }
+      : {}),
   }).sort({ updatedAt: -1 }).lean();
 
   if (matches.length === 0) {

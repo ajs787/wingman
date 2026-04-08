@@ -318,8 +318,8 @@ export default function OnboardingPage() {
       <div className="px-6 pt-8 pb-4 max-w-lg mx-auto w-full">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1">
-            <Bird className="w-5 h-5 text-black" />
-            <span className="text-lg font-bold text-black">Penguin</span>
+                 <Bird className="w-6 h-6 text-black" />
+                 <span className="text-2xl font-display font-bold tracking-wide text-black -mt-1">Penguin</span>
           </div>
           <span className="text-sm text-slate-400">Step {step} of {TOTAL_STEPS}</span>
         </div>

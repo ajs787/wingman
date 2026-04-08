@@ -270,9 +270,9 @@ export default function MyMatchesPage() {
   const rejectedMatches = matches.filter((m) => m.myStatus === 'rejected');
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="border-b border-slate-100 px-6 py-5 sticky top-0 bg-white z-10">
+      <div className="border-b border-black/5 px-6 py-5 sticky top-0 bg-background z-10">
         <div className="max-w-lg mx-auto flex items-center gap-3">
           <Link href="/feed">
             <Button variant="ghost" size="icon">
@@ -280,7 +280,7 @@ export default function MyMatchesPage() {
             </Button>
           </Link>
           <div className="flex-1">
-            <h1 className="text-xl font-bold text-slate-900">My Matches</h1>
+            <h1 className="text-xl font-display font-bold text-slate-900">My Matches</h1>
             <p className="text-xs text-slate-400">Matched for you by your friends</p>
           </div>
         </div>
@@ -295,7 +295,7 @@ export default function MyMatchesPage() {
           </div>
         ) : matches.length === 0 ? (
           <div className="text-center py-16">
-            <Heart className="w-10 h-10 text-gray-300 mx-auto mb-4" />
+            <Heart className="w-10 h-10 text-orange-300 mx-auto mb-4" />
             <p className="text-slate-500 font-medium">No matches yet</p>
             <p className="text-slate-400 text-sm mt-1">Your matches will appear here once a friend swipes for you.</p>
           </div>
@@ -361,17 +361,17 @@ export default function MyMatchesPage() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="border-t border-slate-100 px-6 py-4 fixed bottom-0 left-0 right-0 bg-white">
-        <div className="max-w-lg mx-auto flex items-center justify-around">
-          <Link href="/feed" className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600">
+      <div className="border-t border-black/5 px-4 py-4 fixed bottom-0 left-0 right-0 bg-background">
+        <div className="max-w-lg mx-auto flex items-center gap-2 rounded-[1.75rem] border border-black/5 bg-background px-3 py-3 warm-nav-shell">
+          <Link href="/feed" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-slate-400 hover:text-slate-700">
             <Bird className="w-6 h-6" />
             <span className="text-xs">Feed</span>
           </Link>
-          <Link href="/matches" className="flex flex-col items-center gap-1 text-black">
+          <Link href="/matches" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-black bg-amber-100/80">
             <Heart className="w-6 h-6" />
             <span className="text-xs font-medium">Matches</span>
           </Link>
-          <Link href="/chat" className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600">
+          <Link href="/chat" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-slate-400 hover:text-slate-700">
             <MessageCircle className="w-6 h-6" />
             <span className="text-xs">Chats</span>
           </Link>

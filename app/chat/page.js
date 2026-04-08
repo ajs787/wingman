@@ -85,9 +85,9 @@ export default function ChatListPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="border-b border-slate-100 px-6 py-5 sticky top-0 bg-white z-10">
+      <div className="border-b border-black/5 px-6 py-5 sticky top-0 bg-background z-10">
         <div className="max-w-lg mx-auto flex items-center gap-3">
           <Link href="/feed">
             <Button variant="ghost" size="icon">
@@ -95,7 +95,7 @@ export default function ChatListPage() {
             </Button>
           </Link>
           <div className="flex-1">
-            <h1 className="text-xl font-bold text-slate-900">Messages</h1>
+            <h1 className="text-xl font-display font-bold text-slate-900">Messages</h1>
             <p className="text-xs text-slate-400">Chat with your matches</p>
           </div>
           <Link href="/matches">
@@ -149,17 +149,17 @@ export default function ChatListPage() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="border-t border-slate-100 px-6 py-4 sticky bottom-0 bg-white">
-        <div className="max-w-lg mx-auto flex items-center justify-around">
-          <Link href="/feed" className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600">
+      <div className="border-t border-black/5 px-4 py-4 sticky bottom-0 bg-background">
+        <div className="max-w-lg mx-auto flex items-center gap-2 rounded-[1.75rem] border border-black/5 bg-background px-3 py-3 warm-nav-shell">
+          <Link href="/feed" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-slate-400 hover:text-slate-700">
             <Bird className="w-6 h-6" />
             <span className="text-xs">Feed</span>
           </Link>
-          <Link href="/matches" className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600">
+          <Link href="/matches" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-slate-400 hover:text-slate-700">
             <Heart className="w-6 h-6" />
             <span className="text-xs">Matches</span>
           </Link>
-          <Link href="/chat" className="flex flex-col items-center gap-1 text-black">
+          <Link href="/chat" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-black bg-amber-100/80">
             <MessageCircle className="w-6 h-6" />
             <span className="text-xs font-medium">Chats</span>
           </Link>

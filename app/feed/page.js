@@ -55,16 +55,15 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="border-b border-slate-100 px-6 py-5">
+      <div className="border-b border-black/5 px-6 py-5 bg-background sticky top-0 z-10">
         <div className="max-w-lg mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <Bird className="w-6 h-6 text-black" />
-            <span className="text-xl font-bold text-black">Penguin</span>
+            <span className="text-2xl font-display font-bold tracking-wide text-black dark:text-[hsl(38_43%_92%)] -mt-1">Penguin</span>
           </div>
           <div className="flex items-center gap-1">
-            <ThemeToggle />
             <Link href="/settings">
               <Button variant="ghost" size="icon" title="Edit profile">
                 <UserCircle className="w-5 h-5 text-slate-500" />
@@ -86,7 +85,7 @@ export default function FeedPage() {
         {/* Greeting */}
         {myProfile?.name && (
           <div className="mb-8">
-            <h1 className="text-2xl font-bold text-slate-900">Hey, {myProfile.first_name || myProfile.name}</h1>
+            <h1 className="text-2xl font-display font-bold text-slate-900">Hey, {myProfile.first_name || myProfile.name}</h1>
             <p className="text-slate-500 mt-1">Who are you swiping for today?</p>
           </div>
         )}
@@ -94,14 +93,14 @@ export default function FeedPage() {
         {/* My Matches */}
         <section className="mb-8">
           <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="w-4 h-4 text-gray-600" />
+            <Sparkles className="w-4 h-4 text-orange-500" />
             <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">My Matches</h2>
           </div>
           <Link href="/matches">
-            <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-slate-100 transition-all group cursor-pointer">
+            <div className="flex items-center justify-between p-4 rounded-[1.5rem] border border-black/5 bg-background shadow-[0_16px_45px_-30px_rgba(119,77,24,0.30)] hover:border-orange-200 hover:bg-amber-50/60 transition-all group cursor-pointer">
               <div className="flex items-center gap-3">
                 <div className="relative">
-                  <Heart className="w-8 h-8 text-gray-400" />
+                  <Heart className="w-8 h-8 text-orange-400" />
                   {pendingMatchCount > 0 && (
                     <div className="absolute -top-1 -right-1 w-5 h-5 bg-black rounded-full flex items-center justify-center">
                       <span className="text-white text-xs font-bold">{pendingMatchCount}</span>
@@ -109,7 +108,7 @@ export default function FeedPage() {
                   )}
                 </div>
                 <div>
-                  <p className="font-semibold text-slate-800">
+                    <p className="font-display font-bold text-slate-800">
                     {matchCount > 0 ? `${matchCount} match${matchCount !== 1 ? 'es' : ''}` : 'No matches yet'}
                   </p>
                   <p className="text-xs text-slate-400">
@@ -129,7 +128,7 @@ export default function FeedPage() {
         {/* Who to swipe for */}
         <section className="mb-8">
           <div className="flex items-center gap-2 mb-4">
-            <Users className="w-4 h-4 text-gray-600" />
+            <Users className="w-4 h-4 text-orange-500" />
             <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Swipe for a friend</h2>
           </div>
 
@@ -140,8 +139,8 @@ export default function FeedPage() {
               ))}
             </div>
           ) : friends.length === 0 ? (
-            <div className="text-center py-12 rounded-2xl bg-slate-50 border border-dashed border-slate-200">
-              <Heart className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+            <div className="text-center py-12 rounded-[1.5rem] bg-amber-50/70 border border-dashed border-amber-200">
+              <Heart className="w-8 h-8 text-orange-300 mx-auto mb-3" />
               <p className="text-slate-500 font-medium">No friends added yet</p>
               <p className="text-slate-400 text-sm mt-1 mb-4">Enter a friend&apos;s invite code to get started</p>
               <Link href="/delegate">
@@ -156,7 +155,7 @@ export default function FeedPage() {
                 <button
                   key={friend._id}
                   onClick={() => router.push(`/feed/${friend._id}`)}
-                  className="w-full flex items-center justify-between p-4 rounded-2xl border border-slate-100 hover:border-gray-200 hover:bg-gray-50/20 transition-all group"
+                  className="w-full flex items-center justify-between p-4 rounded-[1.5rem] border border-black/5 bg-background hover:border-orange-200 hover:bg-amber-50/60 transition-all group shadow-[0_14px_40px_-28px_rgba(119,77,24,0.25)]"
                 >
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-600 flex-shrink-0">
@@ -169,7 +168,7 @@ export default function FeedPage() {
                       )}
                     </div>
                     <div className="text-left">
-                      <p className="font-semibold text-slate-800">{friend.name}</p>
+                      <p className="font-display font-bold text-slate-800">{friend.name}</p>
                       <p className="text-xs text-slate-400">
                         {friend.school || friend.year} · {friend.majors?.join(', ') || friend.major}
                       </p>
@@ -192,22 +191,22 @@ export default function FeedPage() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="border-t border-slate-100 px-6 py-4 sticky bottom-0 bg-white">
-        <div className="max-w-lg mx-auto flex items-center justify-around">
-          <Link href="/feed" className="flex flex-col items-center gap-1 text-black">
+      <div className="border-t border-black/5 px-4 py-4 sticky bottom-0 bg-background">
+        <div className="max-w-lg mx-auto flex items-center gap-2 rounded-[1.75rem] border border-black/5 bg-background px-3 py-3 warm-nav-shell">
+          <Link href="/feed" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-black bg-amber-100/80">
             <Bird className="w-6 h-6" />
             <span className="text-xs font-medium">Feed</span>
           </Link>
-          <Link href="/matches" className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 relative">
+          <Link href="/matches" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-slate-400 hover:text-slate-700 relative">
             <Heart className="w-6 h-6" />
             {pendingMatchCount > 0 && (
-              <div className="absolute -top-1 right-0 w-4 h-4 bg-black rounded-full flex items-center justify-center">
+              <div className="absolute -top-1 right-5 w-4 h-4 bg-black rounded-full flex items-center justify-center">
                 <span className="text-white text-[10px] font-bold">{pendingMatchCount}</span>
               </div>
             )}
             <span className="text-xs">Matches</span>
           </Link>
-          <Link href="/chat" className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600">
+          <Link href="/chat" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-slate-400 hover:text-slate-700">
             <MessageCircle className="w-6 h-6" />
             <span className="text-xs">Chats</span>
           </Link>

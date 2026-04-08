@@ -4,26 +4,26 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 38 43% 92%;
+    --foreground: 24 12% 14%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 24 12% 14%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 0 0% 0%;
+    --popover-foreground: 24 12% 14%;
+    --primary: 24 12% 14%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 0 0% 0%;
-    --radius: 1rem;
+    --secondary: 36 100% 94%;
+    --secondary-foreground: 24 12% 14%;
+    --muted: 34 33% 95%;
+    --muted-foreground: 24 8% 46%;
+    --accent: 36 100% 90%;
+    --accent-foreground: 24 12% 14%;
+    --destructive: 0 78% 58%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 34 28% 88%;
+    --input: 34 28% 88%;
+    --ring: 28 100% 60%;
+    --radius: 1.25rem;
   }
 
   .dark {
@@ -47,6 +47,14 @@
     --input: 217 19% 20%;
     --ring: 210 40% 90%;
   }
+
+  .font-display {
+    font-family: var(--font-display), 'Bricolage Grotesque', system-ui, sans-serif;
+  }
+
+  .font-body {
+    font-family: var(--font-body), 'Manrope', system-ui, sans-serif;
+  }
 }
 
 @layer base {
@@ -55,18 +63,31 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
+    font-family: var(--font-body), 'Manrope', system-ui, sans-serif;
+    background-color: hsl(var(--background));
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  .font-display {
+    font-family: var(--font-display), 'Bricolage Grotesque', system-ui, sans-serif;
+    letter-spacing: -0.03em;
   }
 }
 
 /* Custom CTA buttons - solid colors */
 .btn-primary,
 .btn-gradient {
-  background-color: #000000;
+  background-color: hsl(24 12% 14%);
 }
 
 .btn-primary:hover,
 .btn-gradient:hover {
-  background-color: #262626;
+  background-color: hsl(24 12% 20%);
 }
 
 .dark .btn-primary,
@@ -82,7 +103,7 @@
 
 /* Card polish */
 .card-swipe {
-  box-shadow: 0 8px 40px -8px rgba(0, 0, 0, 0.12), 0 2px 8px -2px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 14px 50px -18px rgba(102, 67, 23, 0.18), 0 4px 18px -8px rgba(102, 67, 23, 0.08);
 }
 
 /* Swipe stamp animation */
@@ -140,3 +161,15 @@
 .dark .hover\:text-slate-800:hover,
 .dark .hover\:text-slate-700:hover,
 .dark .hover\:text-black:hover { color: rgb(248 250 252) !important; }
+
+.warm-nav-shell {
+  box-shadow: 0 20px 50px -24px rgba(84, 43, 12, 0.18);
+}
+
+.warm-nav-link {
+  transition: transform 180ms ease, background-color 180ms ease, color 180ms ease;
+}
+
+.warm-nav-link:hover {
+  transform: translateY(-1px);
+}

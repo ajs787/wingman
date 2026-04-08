@@ -5,20 +5,56 @@ export const dynamic = 'force-dynamic';
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import Link from 'next/link';
-import { ArrowLeft, Send } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Ban, MoreVertical, Send } from 'lucide-react';
+
+const REPORT_REASONS = [
+  'harassment',
+  'spam',
+  'fake_profile',
+  'inappropriate_content',
+  'underage',
+  'hate_speech',
+  'scam',
+  'other',
+];
 
 export default function ChatPage() {
   const { matchId } = useParams();
   const router = useRouter();
+  const { toast } = useToast();
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const actionsMenuRef = useRef(null);
 
   const [messages, setMessages] = useState([]);
   const [otherUser, setOtherUser] = useState(null);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState('harassment');
+  const [reportDetails, setReportDetails] = useState('');
+  const [reportAutoBlock, setReportAutoBlock] = useState(false);
+  const [reporting, setReporting] = useState(false);
+  const [blocking, setBlocking] = useState(false);
+  const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
 
   useEffect(() => {
     loadMessages();
@@ -30,6 +66,19 @@ export default function ChatPage() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    if (!actionsMenuOpen) return;
+
+    function handleOutsideClick(e) {
+      if (!actionsMenuRef.current?.contains(e.target)) {
+        setActionsMenuOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [actionsMenuOpen]);
 
   async function loadMessages() {
     try {
@@ -77,6 +126,78 @@ export default function ChatPage() {
 
     setSending(false);
     inputRef.current?.focus();
+  }
+
+  async function handleReportSubmit(e) {
+    e.preventDefault();
+    if (!otherUser?._id || !reportReason || reportDetails.trim().length < 5 || reporting) return;
+
+    setReporting(true);
+    try {
+      const res = await fetch('/api/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reportedUserId: otherUser._id,
+          reason: reportReason,
+          details: reportDetails.trim(),
+          matchId,
+          conversationId: matchId,
+          autoBlock: reportAutoBlock,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: 'Could not submit report', description: data.error || 'Try again.', variant: 'destructive' });
+        return;
+      }
+
+      toast({
+        title: 'Report submitted',
+        description: reportAutoBlock ? 'We submitted your report and blocked this user.' : 'Thanks, our team will review this report.',
+      });
+
+      setReportOpen(false);
+      setReportDetails('');
+      setReportAutoBlock(false);
+
+      if (reportAutoBlock) {
+        router.push('/chat');
+      }
+    } catch {
+      toast({ title: 'Could not submit report', description: 'Network error.', variant: 'destructive' });
+    } finally {
+      setReporting(false);
+    }
+  }
+
+  async function handleBlock() {
+    if (!otherUser?._id || blocking) return;
+    const ok = window.confirm('Block this user? You will no longer see each other.');
+    if (!ok) return;
+
+    setBlocking(true);
+    try {
+      const res = await fetch('/api/block', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blockedUserId: otherUser._id, reason: 'Blocked from matched chat' }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast({ title: 'Could not block user', description: data.error || 'Try again.', variant: 'destructive' });
+        return;
+      }
+
+      toast({ title: 'User blocked', description: 'This conversation is now hidden.' });
+      router.push('/chat');
+    } catch {
+      toast({ title: 'Could not block user', description: 'Network error.', variant: 'destructive' });
+    } finally {
+      setBlocking(false);
+    }
   }
 
   function formatTime(date) {
@@ -130,6 +251,46 @@ export default function ChatPage() {
                 <h1 className="font-semibold text-slate-900">{otherUser.name}</h1>
                 <p className="text-xs text-slate-400">Your match</p>
               </div>
+            </div>
+          )}
+          {otherUser && (
+            <div className="relative" ref={actionsMenuRef}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setActionsMenuOpen((prev) => !prev)}
+                aria-label="Open chat actions"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </Button>
+
+              {actionsMenuOpen && (
+                <div className="absolute right-0 top-11 w-44 rounded-xl border border-slate-200 bg-white shadow-lg p-1 z-20">
+                  <button
+                    type="button"
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-50"
+                    onClick={() => {
+                      setActionsMenuOpen(false);
+                      setReportOpen(true);
+                    }}
+                  >
+                    <AlertTriangle className="w-4 h-4" />
+                    Report
+                  </button>
+                  <button
+                    type="button"
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50 disabled:opacity-60"
+                    onClick={() => {
+                      setActionsMenuOpen(false);
+                      handleBlock();
+                    }}
+                    disabled={blocking}
+                  >
+                    <Ban className="w-4 h-4" />
+                    {blocking ? 'Blocking...' : 'Block'}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -225,6 +386,63 @@ export default function ChatPage() {
           </Button>
         </form>
       </div>
+
+      <Dialog open={reportOpen} onOpenChange={setReportOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Report {otherUser?.name || 'user'}</DialogTitle>
+            <DialogDescription>
+              Reports are private. The other person will not see who reported them.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleReportSubmit} className="space-y-4">
+            <div>
+              <p className="text-sm text-slate-600 mb-1">Reason</p>
+              <Select value={reportReason} onValueChange={setReportReason}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select reason" />
+                </SelectTrigger>
+                <SelectContent>
+                  {REPORT_REASONS.map((reason) => (
+                    <SelectItem key={reason} value={reason}>
+                      {reason.replace('_', ' ')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <p className="text-sm text-slate-600 mb-1">Details</p>
+              <textarea
+                value={reportDetails}
+                onChange={(e) => setReportDetails(e.target.value)}
+                placeholder="Share what happened (minimum 5 characters)"
+                className="w-full min-h-[110px] px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-black"
+              />
+            </div>
+
+            <label className="flex items-center gap-2 text-sm text-slate-600">
+              <input
+                type="checkbox"
+                checked={reportAutoBlock}
+                onChange={(e) => setReportAutoBlock(e.target.checked)}
+              />
+              Also block this user immediately
+            </label>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setReportOpen(false)} disabled={reporting}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={reporting || reportDetails.trim().length < 5}>
+                {reporting ? 'Submitting...' : 'Submit report'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

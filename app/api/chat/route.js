@@ -5,6 +5,7 @@ import Match from '@/lib/models/Match';
 import Message from '@/lib/models/Message';
 import User from '@/lib/models/User';
 import { getSession } from '@/lib/auth';
+import { isBlockedBetween } from '@/lib/safety/blocking';
 
 function photoUrl(photo, userId) {
   return photo.filename ? `/uploads/${userId}/${photo.filename}` : null;
@@ -37,13 +38,22 @@ export async function GET(request) {
     return NextResponse.json({ error: 'Match not yet accepted by both users' }, { status: 403 });
   }
 
+  if (match.status === 'blocked' || match.status === 'inactive') {
+    return NextResponse.json({ error: 'Conversation unavailable' }, { status: 403 });
+  }
+
+  const otherId = isUserA ? match.user_b : match.user_a;
+  const blocked = await isBlockedBetween(userId, otherId.toString());
+  if (blocked) {
+    return NextResponse.json({ error: 'Conversation unavailable' }, { status: 403 });
+  }
+
   // Get messages
   const messages = await Message.find({ match_id: matchId })
     .sort({ createdAt: 1 })
     .lean();
 
   // Mark messages from other user as read
-  const otherId = isUserA ? match.user_b : match.user_a;
   await Message.updateMany(
     { match_id: matchId, sender_id: otherId, read: false },
     { read: true }
@@ -109,6 +119,16 @@ export async function POST(request) {
   // Check if both users have accepted
   if (match.user_a_status !== 'accepted' || match.user_b_status !== 'accepted') {
     return NextResponse.json({ error: 'Match not yet accepted by both users' }, { status: 403 });
+  }
+
+  if (match.status === 'blocked' || match.status === 'inactive') {
+    return NextResponse.json({ error: 'Cannot send messages in this conversation' }, { status: 403 });
+  }
+
+  const otherId = isUserA ? match.user_b.toString() : match.user_a.toString();
+  const blocked = await isBlockedBetween(userId, otherId);
+  if (blocked) {
+    return NextResponse.json({ error: 'Cannot send messages in this conversation' }, { status: 403 });
   }
 
   const message = await Message.create({

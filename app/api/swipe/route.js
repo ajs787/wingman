@@ -8,6 +8,7 @@ import Match from '@/lib/models/Match';
 import User from '@/lib/models/User';
 import { getSession } from '@/lib/auth';
 import { refreshLikeQuotaIfNeeded, getNextResetAt } from '@/lib/like-limits';
+import { isBlockedBetween } from '@/lib/safety/blocking';
 
 const swipeSchema = z.object({
   owner_user_id:  z.string().min(1),
@@ -50,6 +51,15 @@ export async function POST(request) {
 
   if (!delegation) {
     return NextResponse.json({ error: 'No active delegation. Cannot swipe.' }, { status: 403 });
+  }
+
+  const [ownerBlocked, delegateBlocked] = await Promise.all([
+    isBlockedBetween(owner_user_id, target_user_id),
+    isBlockedBetween(session.sub, target_user_id),
+  ]);
+
+  if (ownerBlocked || delegateBlocked) {
+    return NextResponse.json({ error: 'This profile is unavailable.' }, { status: 403 });
   }
 
   let reservedLike = false;
