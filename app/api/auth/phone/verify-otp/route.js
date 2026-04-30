@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/mongodb';
 import User from '@/lib/models/User';
 import OTP from '@/lib/models/OTP';
 import { signToken } from '@/lib/auth';
+import { setSessionCookie } from '@/lib/auth-cookies';
 import { phoneOTPSchema } from '@/lib/validations';
 
 export async function POST(request) {
@@ -65,7 +66,7 @@ export async function POST(request) {
       const netid = `phone_${normalized}`;
       user = await User.create({
         netid,
-        email: `${netid}@penguin.local`,
+        email: `${netid}@wingman.local`,
         phone_number: fullPhone,
         password_hash: null, // Phone auth only
       });
@@ -90,12 +91,7 @@ export async function POST(request) {
       hasProfile: !!user.name,
     });
 
-    response.cookies.set('penguin_session', token, {
-      httpOnly: true,
-      path: '/',
-      maxAge: 30 * 24 * 60 * 60,
-      sameSite: 'lax',
-    });
+    setSessionCookie(response, token);
 
     return response;
   } catch (err) {

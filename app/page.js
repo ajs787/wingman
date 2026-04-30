@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Heart, Users, Shield, Bird } from 'lucide-react';
+import { Heart, Users, Shield, Bird, Drumstick } from 'lucide-react';
 import ThemeToggle from '@/components/theme-toggle';
 
 export default function LandingPage() {
@@ -11,9 +11,9 @@ export default function LandingPage() {
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 sm:px-8 py-5 border-b border-black/5 bg-background sticky top-0 z-20">
         <div className="flex items-center gap-1">
-          <Bird className="w-6 h-6 text-black" />
+          <Drumstick className="w-6 h-6 text-black" />
           <span className="text-2xl font-display font-bold tracking-wide text-black dark:text-[hsl(38_43%_92%)] -mt-1">
-            Penguin
+            wingman
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -41,12 +41,12 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="flex-1 flex flex-col items-center justify-center text-center px-6 py-40 animate-fade-in relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute left-1/2 top-16 h-72 w-72 -translate-x-1/2 rounded-full bg-amber-200/30 blur-3xl" />
+          <div className="absolute left-1/2 top-20 h-72 w-72 -translate-x-1/2 rounded-full bg-amber-200/30 dark:bg-amber-200/18 blur-3xl" />
         </div>
         <h1 className="relative text-5xl sm:text-7xl font-display font-extrabold tracking-tight text-slate-950 dark:text-[hsl(38_43%_92%)] max-w-3xl leading-[1.02] mb-6">
           <span className="relative inline-block text-slate-950 dark:text-orange-400">
             Your friends
-            <Bird className="absolute -top-5 -right-3 w-10 h-10 sm:w-12 sm:h-12 text-slate-950 dark:text-orange-400 transform -rotate--1 scale-x-[-1]" />
+            <Bird className="absolute -top-5 -right-3 w-10 h-10 sm:w-12 sm:h-12 text-slate-950 dark:text-orange-400 transform -rotate-12 scale-x-[-1]" />
           </span>
           <br />
           <span className="text-orange-500 dark:text-[hsl(38_43%_92%)]">
@@ -113,7 +113,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="py-8 border-t border-black/5 text-center text-sm text-slate-500 bg-background dark:bg-slate-950 dark:text-slate-400">
-        <p>Penguin Est. 03.22.26</p>
+        <p>Wingman Est. 03.22.26</p>
       </footer>
     </div>
   );

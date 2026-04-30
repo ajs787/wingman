@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { connectDB } from '@/lib/mongodb';
 import User from '@/lib/models/User';
 import { signToken } from '@/lib/auth';
+import { setSessionCookie } from '@/lib/auth-cookies';
 import { signupSchema } from '@/lib/validations';
 
 export async function POST(request) {
@@ -85,12 +86,7 @@ export async function POST(request) {
     hasProfile: false,
   });
 
-  response.cookies.set('penguin_session', token, {
-    httpOnly: true,
-    path: '/',
-    maxAge: 30 * 24 * 60 * 60,
-    sameSite: 'lax',
-  });
+  setSessionCookie(response, token);
 
   return response;
 }

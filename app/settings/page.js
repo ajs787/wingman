@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { useDropzone } from 'react-dropzone';
-import { ArrowLeft, Upload, X, GripVertical, Check, Plus, Trash2, Copy, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Upload, X, GripVertical, Check, Copy, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { CUISINE_OPTIONS, RACE_ETHNICITY_OPTIONS, SUBSTANCE_USE_OPTIONS, SEXUALITY_OPTIONS, PROFILE_PROMPTS } from '@/lib/constants';
 
@@ -96,6 +96,8 @@ export default function SettingsPage() {
   const [job, setJob] = useState('');
   const [religion, setReligion] = useState('');
   const [personalityAnswer, setPersonalityAnswer] = useState('');
+  const [hiddenPrompt, setHiddenPrompt] = useState('');
+  const [hiddenPromptAnswer, setHiddenPromptAnswer] = useState('');
   const [favoriteCuisines, setFavoriteCuisines] = useState([]);
   const [raceEthnicities, setRaceEthnicities] = useState([]);
   const [raceEthnicityToAdd, setRaceEthnicityToAdd] = useState('');
@@ -108,6 +110,7 @@ export default function SettingsPage() {
 
   // Prompts
   const [prompts, setPrompts] = useState([
+    { prompt: '', answer: '' },
     { prompt: '', answer: '' },
     { prompt: '', answer: '' },
   ]);
@@ -136,6 +139,8 @@ export default function SettingsPage() {
         if (profile.job) setJob(profile.job);
         if (profile.religion) setReligion(profile.religion);
         if (profile.personality_answer) setPersonalityAnswer(profile.personality_answer);
+        if (profile.hidden_prompt) setHiddenPrompt(profile.hidden_prompt);
+        if (profile.hidden_prompt_answer) setHiddenPromptAnswer(profile.hidden_prompt_answer);
         if (Array.isArray(profile.favorite_cuisines) && profile.favorite_cuisines.length) {
           setFavoriteCuisines(profile.favorite_cuisines.slice(0, 3));
         } else if (profile.favorite_cuisine) {
@@ -162,7 +167,8 @@ export default function SettingsPage() {
           const photoPrompts = profile.photos
             .filter((p) => p.prompt)
             .map((p) => ({ prompt: p.prompt, answer: p.prompt_answer || '' }));
-          if (photoPrompts.length) setPrompts(photoPrompts);
+          const normalizedPrompts = [0, 1, 2].map((idx) => photoPrompts[idx] || { prompt: '', answer: '' });
+          setPrompts(normalizedPrompts);
         }
       } catch {}
 
@@ -250,6 +256,8 @@ export default function SettingsPage() {
           job: job.trim() || null,
           religion: religion.trim() || null,
           personality_answer: personalityAnswer || null,
+          hidden_prompt: hiddenPrompt || null,
+          hidden_prompt_answer: hiddenPrompt ? (hiddenPromptAnswer.trim() || null) : null,
           favorite_cuisine: favoriteCuisines[0] || null,
           favorite_cuisines: favoriteCuisines,
           race_ethnicities: raceEthnicities,
@@ -562,22 +570,11 @@ export default function SettingsPage() {
         {/* Prompts */}
         <section>
           <h2 className="text-base font-semibold text-slate-800 mb-1">Prompts</h2>
-          <p className="text-xs text-slate-400 mb-4">Answer at least 2 — these show on your profile.</p>
+          <p className="text-xs text-slate-400 mb-4">You have 3 profile prompts — these show on your profile.</p>
           <div className="space-y-4">
             {prompts.map((ps, i) => (
               <div key={i} className="p-4 rounded-2xl border border-slate-100 bg-slate-50 space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs text-slate-500 uppercase tracking-wide">Prompt {i + 1}</Label>
-                  {prompts.length > 2 && (
-                    <button
-                      type="button"
-                      onClick={() => setPrompts(prompts.filter((_, idx) => idx !== i))}
-                      className="text-slate-300 hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
+                <Label className="text-xs text-slate-500 uppercase tracking-wide">Prompt {i + 1}</Label>
                 <Select value={ps.prompt} onValueChange={(v) => {
                   const next = [...prompts]; next[i] = { ...next[i], prompt: v }; setPrompts(next);
                 }}>
@@ -600,14 +597,26 @@ export default function SettingsPage() {
                 )}
               </div>
             ))}
-            {prompts.length < 5 && (
-              <button
-                type="button"
-                onClick={() => setPrompts([...prompts, { prompt: '', answer: '' }])}
-                className="flex items-center gap-2 text-sm text-black hover:underline"
-              >
-                <Plus className="w-4 h-4" /> Add another prompt
-              </button>
+          </div>
+
+          <div className="mt-5 p-4 rounded-2xl border border-slate-100 bg-slate-50 space-y-3">
+            <Label className="text-xs text-slate-500 uppercase tracking-wide">Hidden prompt (unlocks after match)</Label>
+            <p className="text-xs text-slate-400">This prompt is only revealed to people after they match with you.</p>
+            <Select value={hiddenPrompt} onValueChange={setHiddenPrompt}>
+              <SelectTrigger className="bg-white"><SelectValue placeholder="Pick your hidden prompt..." /></SelectTrigger>
+              <SelectContent>
+                {PROFILE_PROMPTS.map((p) => <SelectItem key={`hidden-${p}`} value={p}>{p}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            {hiddenPrompt && (
+              <textarea
+                value={hiddenPromptAnswer}
+                onChange={(e) => setHiddenPromptAnswer(e.target.value)}
+                placeholder="Your hidden answer..."
+                maxLength={300}
+                rows={2}
+                className="w-full rounded-xl border border-input bg-white px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+              />
             )}
           </div>
         </section>

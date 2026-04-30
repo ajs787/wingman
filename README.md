@@ -1,6 +1,6 @@
-# Penguin — Your Friends Swipe for You
+# Wingman — Your Friends Swipe for You
 
-Penguin is a friend-powered dating app: users delegate swiping to trusted friends, and matches form only when both sides receive mutual right-swipes.
+Wingman is a friend-powered dating app: users delegate swiping to trusted friends, and matches form only when both sides receive mutual right-swipes.
 
 ## Current Stack
 
@@ -8,7 +8,7 @@ Penguin is a friend-powered dating app: users delegate swiping to trusted friend
 - React 18
 - MongoDB + Mongoose
 - Tailwind CSS + Radix UI components
-- JWT cookie sessions (`penguin_session`)
+- JWT cookie sessions (`wingman_session`)
 - Optional auth methods:
   - Email/password
   - Google Sign-In
@@ -79,7 +79,7 @@ npm install
 2. Create `.env.local` with at least:
 
 ```env
-MONGODB_URI=mongodb://127.0.0.1:27017/penguin
+MONGODB_URI=mongodb://127.0.0.1:27017/wingman
 JWT_SECRET=replace-with-a-strong-secret
 ```
 
@@ -114,10 +114,14 @@ This creates demo profiles and active delegations so you can test swiping immedi
 - `npm run build` — production build
 - `npm run start` — run production build
 - `npm run lint` — lint
+- `npm run ios:add` — add iOS platform files via Capacitor
+- `npm run ios:sync` — sync Capacitor config/assets into iOS project
+- `npm run ios:open` — open iOS Xcode workspace
+- `npm run ios:refresh` — sync and open iOS project
 
 ## Auth Notes
 
-- Session is stored in an HTTP-only cookie named `penguin_session`
+- Session is stored in an HTTP-only cookie named `wingman_session`
 - Route protection is enforced by middleware for authenticated pages
 - Email auth enforces `.edu` domain validation
 - Google Sign-In currently uses a hardcoded client ID in login/API files (consider moving to env vars)
@@ -152,3 +156,27 @@ Feed/swipes/matches:
 - Deploy as a standard Next.js app (e.g., Vercel)
 - Set `MONGODB_URI` and `JWT_SECRET` in deployment environment
 - Ensure cookie/domain behavior matches your production URL
+
+## iOS Wrapper + App Store
+
+This repository is configured for a Capacitor iOS wrapper that loads your hosted web app URL.
+
+1. Set your production app URL before syncing iOS:
+
+```bash
+export CAPACITOR_SERVER_URL="https://your-production-domain.example"
+```
+
+2. Sync and open the iOS project:
+
+```bash
+npm run ios:sync
+npm run ios:open
+```
+
+3. In Xcode, configure signing, bundle identifier, app version/build, and archive for App Store Connect upload.
+
+Additional guides in this repo:
+
+- `IOS_APP_STORE_CHECKLIST.md`
+- `IOS_AUTH_COOKIE_RISK_AUDIT.md`

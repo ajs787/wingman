@@ -11,7 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { useDropzone } from 'react-dropzone';
-import { ArrowLeft, ArrowRight, Upload, X, GripVertical, Check, Copy, Bird, Plus } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Upload, X, GripVertical, Check, Copy, Drumstick, Plus } from 'lucide-react';
 import {
   US_COLLEGES,
   COMMON_MAJORS,
@@ -116,7 +116,7 @@ export default function OnboardingPage() {
   // Step 3 — Photos (5 slots)
   const [photos, setPhotos] = useState(Array(5).fill(null));
 
-  // Step 4 — Prompts (at least 2)
+  // Step 4 — Prompts (exactly 3 required)
   const [promptSelections, setPromptSelections] = useState([
     { prompt: '', answer: '' },
     { prompt: '', answer: '' },
@@ -169,8 +169,7 @@ export default function OnboardingPage() {
     return photos.filter((p) => p?.file || p?.existing).length === 5;
   }
   function canProceedStep4() {
-    const filled = promptSelections.filter((p) => p.prompt && p.answer.trim().length > 0);
-    return filled.length >= 3;
+    return promptSelections.every((p) => p.prompt && p.answer.trim().length > 0);
   }
 
   function handlePhotoUpload(index, file) {
@@ -218,6 +217,11 @@ export default function OnboardingPage() {
   }
 
   async function handleFinish() {
+    if (!canProceedStep4()) {
+      toast({ title: 'Finish all prompts', description: 'Please complete all 3 prompts before signing up.', variant: 'destructive' });
+      return;
+    }
+
     setSaving(true);
     try {
       const finalSchool = school === 'Other' ? customSchool.trim() : school;
@@ -318,8 +322,8 @@ export default function OnboardingPage() {
       <div className="px-6 pt-8 pb-4 max-w-lg mx-auto w-full">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1">
-                 <Bird className="w-6 h-6 text-black" />
-                 <span className="text-2xl font-display font-bold tracking-wide text-black -mt-1">Penguin</span>
+               <Drumstick className="w-6 h-6 text-black" />
+                 <span className="text-2xl font-display font-bold tracking-wide text-black -mt-1">Wingman</span>
           </div>
           <span className="text-sm text-slate-400">Step {step} of {TOTAL_STEPS}</span>
         </div>
@@ -616,7 +620,7 @@ export default function OnboardingPage() {
           <div className="space-y-6 py-6">
             <div>
               <h2 className="text-2xl font-bold text-slate-900">Add your prompts</h2>
-              <p className="text-slate-500 mt-1">Answer at least 3 prompts so people get to know you.</p>
+              <p className="text-slate-500 mt-1">Complete all 3 prompts so people get to know you.</p>
             </div>
             {promptSelections.map((ps, i) => (
               <div key={i} className="space-y-2 p-4 rounded-2xl border border-slate-100 bg-slate-50">
@@ -639,12 +643,6 @@ export default function OnboardingPage() {
                 )}
               </div>
             ))}
-            {promptSelections.length < 5 && (
-              <button type="button" onClick={() => setPromptSelections([...promptSelections, { prompt: '', answer: '' }])}
-                className="text-sm text-black hover:underline">
-                + Add another prompt
-              </button>
-            )}
           </div>
         )}
 
@@ -683,7 +681,7 @@ export default function OnboardingPage() {
               <div className="py-2">
                 <span className="text-slate-500">Prompts answered</span>
                 <span className="ml-2 font-medium text-slate-800">
-                  {promptSelections.filter((p) => p.prompt && p.answer.trim()).length}
+                  {promptSelections.filter((p) => p.prompt && p.answer.trim()).length}/3
                 </span>
               </div>
             </div>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
 
-const STORAGE_KEY = 'penguin-theme';
+const STORAGE_KEY = 'wingman-theme';
 
 function applyTheme(theme) {
   const root = document.documentElement;

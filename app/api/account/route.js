@@ -8,6 +8,7 @@ import InviteCode from '@/lib/models/InviteCode';
 import Delegation from '@/lib/models/Delegation';
 import Swipe from '@/lib/models/Swipe';
 import { getSession } from '@/lib/auth';
+import { clearSessionCookie } from '@/lib/auth-cookies';
 
 const settingsSchema = z.object({
   hidden: z.boolean().optional(),
@@ -94,13 +95,7 @@ export async function DELETE(request) {
 
   // Clear the auth cookie
   const response = NextResponse.json({ ok: true });
-  response.cookies.set('penguin_session', '', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 0,
-    path: '/',
-  });
+  clearSessionCookie(response);
 
   return response;
 }

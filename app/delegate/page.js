@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Key } from 'lucide-react';
+import { BASIC_MAX_ACTIVE_DELEGATIONS } from '@/lib/constants';
 
 export default function DelegatePage() {
   const router = useRouter();
@@ -31,7 +32,10 @@ export default function DelegatePage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || 'Invalid invite code. Please check and try again.');
+        setError(
+          data.error ||
+          'Invalid invite code. Please check and try again.'
+        );
       } else {
         setSuccess(data.owner);
       }
@@ -91,6 +95,9 @@ export default function DelegatePage() {
           </h1>
           <p className="text-slate-500 text-center text-sm mb-8">
             Got a code from a friend? Enter it here to become their wingman.
+          </p>
+          <p className="text-slate-400 text-center text-xs mb-6">
+            Basic version limit: up to {BASIC_MAX_ACTIVE_DELEGATIONS} friends at a time.
           </p>
 
           <form onSubmit={handleRedeem} className="space-y-4">

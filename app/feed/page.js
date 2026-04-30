@@ -7,7 +7,8 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import ThemeToggle from '@/components/theme-toggle';
 import Link from 'next/link';
-import { Users, Plus, Heart, ChevronRight, UserCircle, Sparkles, Bird, MessageCircle, Settings } from 'lucide-react';
+import { Users, Plus, Heart, ChevronRight, UserCircle, Sparkles, Drumstick, MessageCircle, Settings } from 'lucide-react';
+import { BASIC_MAX_ACTIVE_DELEGATIONS } from '@/lib/constants';
 
 export default function FeedPage() {
   const router = useRouter();
@@ -48,7 +49,7 @@ export default function FeedPage() {
   }, []);
 
   function handleSignOut() {
-    try { localStorage.removeItem('penguin_user'); } catch {}
+    try { localStorage.removeItem('wingman_user'); } catch {}
     fetch('/api/auth/logout', { method: 'POST' }).finally(() => {
       router.push('/');
     });
@@ -60,8 +61,8 @@ export default function FeedPage() {
       <div className="border-b border-black/5 px-6 py-5 bg-background sticky top-0 z-10">
         <div className="max-w-lg mx-auto flex items-center justify-between">
           <div className="flex items-center gap-1">
-            <Bird className="w-6 h-6 text-black" />
-            <span className="text-2xl font-display font-bold tracking-wide text-black dark:text-[hsl(38_43%_92%)] -mt-1">Penguin</span>
+            <Drumstick className="w-6 h-6 text-black" />
+            <span className="text-2xl font-display font-bold tracking-wide text-black dark:text-[hsl(38_43%_92%)] -mt-1">Wingman</span>
           </div>
           <div className="flex items-center gap-1">
             <Link href="/settings">
@@ -143,6 +144,7 @@ export default function FeedPage() {
               <Heart className="w-8 h-8 text-orange-300 mx-auto mb-3" />
               <p className="text-slate-500 font-medium">No friends added yet</p>
               <p className="text-slate-400 text-sm mt-1 mb-4">Enter a friend&apos;s invite code to get started</p>
+              <p className="text-slate-400 text-xs mb-4">Basic version: up to {BASIC_MAX_ACTIVE_DELEGATIONS} friends at a time.</p>
               <Link href="/delegate">
                 <Button variant="outline" size="sm" className="gap-2">
                   <Plus className="w-4 h-4" /> Enter invite code
@@ -194,7 +196,7 @@ export default function FeedPage() {
       <div className="border-t border-black/5 px-4 py-4 sticky bottom-0 bg-background">
         <div className="max-w-lg mx-auto flex items-center gap-2 rounded-[1.75rem] border border-black/5 bg-background px-3 py-3 warm-nav-shell">
           <Link href="/feed" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-black bg-amber-100/80">
-            <Bird className="w-6 h-6" />
+            <Drumstick className="w-6 h-6" />
             <span className="text-xs font-medium">Feed</span>
           </Link>
           <Link href="/matches" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-slate-400 hover:text-slate-700 relative">

@@ -3,6 +3,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { connectDB } from '@/lib/mongodb';
 import User from '@/lib/models/User';
 import { signToken } from '@/lib/auth';
+import { setSessionCookie } from '@/lib/auth-cookies';
 import { emailSchema } from '@/lib/validations';
 
 const client = new OAuth2Client('379185107870-dnihr4sldvtrs9i38uim0aj61u8rp6n1.apps.googleusercontent.com');
@@ -75,12 +76,7 @@ export async function POST(request) {
       hasProfile: !!user.name && user.photos?.length > 0,
     });
 
-    response.cookies.set('penguin_session', token, {
-      httpOnly: true,
-      path: '/',
-      maxAge: 30 * 24 * 60 * 60,
-      sameSite: 'lax',
-    });
+    setSessionCookie(response, token);
 
     return response;
   } catch (err) {

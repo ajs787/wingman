@@ -24,6 +24,8 @@ function serializeUser(u) {
     major: u.major,
     majors: u.majors,
     personality_answer: u.personality_answer,
+    hidden_prompt: u.hidden_prompt,
+    hidden_prompt_answer: u.hidden_prompt_answer,
     photos: (u.photos ?? [])
       .sort((a, b) => a.position - b.position)
       .map((ph) => ({
@@ -94,7 +96,7 @@ export async function GET(request) {
   );
 
   const profiles = await User.find({ _id: { $in: otherIds } })
-    .select('name first_name last_name age school year major majors personality_answer photos')
+    .select('name first_name last_name age school year major majors personality_answer hidden_prompt hidden_prompt_answer photos')
     .lean();
 
   const profileMap = {};

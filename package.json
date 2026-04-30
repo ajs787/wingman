@@ -1,14 +1,21 @@
 {
-  "name": "penguin",
+  "name": "wingman",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "ios:add": "npx cap add ios",
+    "ios:sync": "npx cap sync ios",
+    "ios:open": "npx cap open ios",
+    "ios:refresh": "npx cap sync ios && npx cap open ios"
   },
   "dependencies": {
+    "@capacitor/cli": "^7.6.2",
+    "@capacitor/core": "^7.6.2",
+    "@capacitor/ios": "^7.6.2",
     "@radix-ui/react-avatar": "^1.0.4",
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-dropdown-menu": "^2.0.6",

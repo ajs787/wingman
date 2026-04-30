@@ -16,10 +16,10 @@ const bodyFont = Manrope({
 });
 
 export const metadata = {
-  title: 'Penguin — Your friends swipe for you.',
+  title: 'Wingman — Your friends swipe for you.',
   description: 'The Rutgers dating app where your friends swipe on your behalf.',
   icons: {
-    icon: '/favicon.ico',
+    icon: '/icon.svg',
   },
 };
 
@@ -29,7 +29,7 @@ export default function RootLayout({ children }) {
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var key='penguin-theme';var saved=localStorage.getItem(key);var prefersDark=window.matchMedia('(prefers-color-scheme: dark)').matches;var theme=saved||(prefersDark?'dark':'light');if(theme==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();`,
+            __html: `(function(){try{var key='wingman-theme';var saved=localStorage.getItem(key);var prefersDark=window.matchMedia('(prefers-color-scheme: dark)').matches;var theme=saved||(prefersDark?'dark':'light');if(theme==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();`,
           }}
         />
       </head>

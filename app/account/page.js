@@ -70,7 +70,7 @@ export default function AccountSettingsPage() {
     try {
       const res = await fetch('/api/account', { method: 'DELETE' });
       if (res.ok) {
-        try { localStorage.removeItem('penguin_user'); } catch {}
+        try { localStorage.removeItem('wingman_user'); } catch {}
         router.push('/');
       } else {
         const { error } = await res.json();

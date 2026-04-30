@@ -17,7 +17,7 @@ export default function MatchProfileViewPage() {
   useEffect(() => {
     async function loadMatch() {
       try {
-        const user = JSON.parse(localStorage.getItem('penguin_user') || '{}');
+        const user = JSON.parse(localStorage.getItem('wingman_user') || '{}');
         if (!user.userId) {
           setError('Could not load your session.');
           return;
@@ -104,6 +104,14 @@ export default function MatchProfileViewPage() {
                 <p className="text-sm text-slate-600">Personality: {person.personality_answer}</p>
               )}
             </div>
+
+            {person?.hidden_prompt && person?.hidden_prompt_answer && (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+                <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">Unlocked after matching</p>
+                <p className="text-sm text-slate-600 font-medium mb-1">{person.hidden_prompt}</p>
+                <p className="text-slate-900 text-lg font-serif leading-snug">{person.hidden_prompt_answer}</p>
+              </div>
+            )}
 
             {match?.friendNote && (
               <div className="rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4">

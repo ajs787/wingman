@@ -13,7 +13,7 @@ export async function middleware(request) {
     return NextResponse.next();
   }
 
-  const user = request.cookies.get('penguin_session')?.value;
+  const user = request.cookies.get('wingman_session')?.value;
   if (!user) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('next', pathname);

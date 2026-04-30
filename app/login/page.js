@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Bird, Phone, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { Drumstick, Phone, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 
 function AuthForm() {
   const router = useRouter();
@@ -62,7 +62,7 @@ function AuthForm() {
         return;
       }
 
-      localStorage.setItem('penguin_user', JSON.stringify({
+      localStorage.setItem('wingman_user', JSON.stringify({
         userId: data.userId,
         email: data.email,
         netid: data.netid,
@@ -134,7 +134,7 @@ function AuthForm() {
         return;
       }
 
-      localStorage.setItem('penguin_user', JSON.stringify({
+      localStorage.setItem('wingman_user', JSON.stringify({
         userId: data.userId,
         email: data.email,
         netid: data.netid,
@@ -179,7 +179,7 @@ function AuthForm() {
         return;
       }
 
-      localStorage.setItem('penguin_user', JSON.stringify({
+      localStorage.setItem('wingman_user', JSON.stringify({
         userId: data.userId,
         email: data.email,
         netid: data.netid,
@@ -225,7 +225,7 @@ function AuthForm() {
           {/* Logo - clickable */}
           <Link href="/" className="flex justify-center mb-8">
             <div className="w-12 h-12 rounded-2xl bg-black flex items-center justify-center shadow-lg shadow-gray-400 hover:bg-gray-800 transition-colors">
-              <Bird className="w-6 h-6 text-white" />
+              <Drumstick className="w-6 h-6 text-white" />
             </div>
           </Link>
 
@@ -255,7 +255,7 @@ function AuthForm() {
           {isSignup ? 'Create your account' : 'Welcome back'}
         </h1>
         <p className="text-slate-400 text-center text-sm mb-8">
-          {isSignup ? 'Start finding matches through your friends.' : 'Log in to continue to Penguin.'}
+          {isSignup ? 'Start finding matches through your friends.' : 'Log in to continue to Wingman.'}
         </p>
 
         {/* Auth type toggle (Email vs Phone) */}
