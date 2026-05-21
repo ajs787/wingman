@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Heart, Users, Shield, Bird, Drumstick } from 'lucide-react';
+import { Heart, Users, Shield, Bird } from 'lucide-react';
 import ThemeToggle from '@/components/theme-toggle';
 
 export default function LandingPage() {
@@ -11,7 +11,7 @@ export default function LandingPage() {
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 sm:px-8 py-5 border-b border-black/5 bg-background sticky top-0 z-20">
         <div className="flex items-center gap-1">
-          <Drumstick className="w-6 h-6 text-black" />
+          <Bird className="w-6 h-6 text-black" />
           <span className="text-2xl font-display font-bold tracking-wide text-black dark:text-[hsl(38_43%_92%)] -mt-1">
             wingman
           </span>
@@ -46,7 +46,7 @@ export default function LandingPage() {
         <h1 className="relative text-5xl sm:text-7xl font-display font-extrabold tracking-tight text-slate-950 dark:text-[hsl(38_43%_92%)] max-w-3xl leading-[1.02] mb-6">
           <span className="relative inline-block text-slate-950 dark:text-orange-400">
             Your friends
-            <Bird className="absolute -top-5 -right-3 w-10 h-10 sm:w-12 sm:h-12 text-slate-950 dark:text-orange-400 transform -rotate-12 scale-x-[-1]" />
+            <Bird className="absolute -top-5 -right-3 w-10 h-10 sm:w-12 sm:h-12 text-slate-950 dark:text-orange-400 transform rotate-6 scale-x-[-1]" />
           </span>
           <br />
           <span className="text-orange-500 dark:text-[hsl(38_43%_92%)]">

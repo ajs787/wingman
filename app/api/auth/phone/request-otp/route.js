@@ -1,24 +1,10 @@
+export const runtime = 'nodejs';
+
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
-import User from '@/lib/models/User';
 import OTP from '@/lib/models/OTP';
 import { phoneSchema } from '@/lib/validations';
-
-// Helper to generate 6-digit OTP
-function generateOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
-// Helper to send SMS (placeholder — integrate with Twilio/etc.)
-async function sendSMS(phoneNumber, code) {
-  // TODO: Integrate with Twilio or another SMS service
-  // For now, log to console in development
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`[DEV] OTP for ${phoneNumber}: ${code}`);
-  }
-  // In production, send via SMS gateway
-  return true;
-}
+import { generateOTP, hashOTP, normalizeUSPhone, PHONE_OTP_RESEND_COOLDOWN_MS, sendOTP } from '@/lib/phone-otp';
 
 export async function POST(request) {
   let body;
@@ -41,29 +27,59 @@ export async function POST(request) {
   try {
     await connectDB();
 
-    // Normalize phone number (remove formatting)
-    const normalized = phone_number.replace(/\D/g, '').slice(-10);
-    const fullPhone = '+1' + normalized;
+    const fullPhone = normalizeUSPhone(phone_number);
+    if (!fullPhone) {
+      return NextResponse.json(
+        { error: 'Please enter a valid US phone number' },
+        { status: 400 }
+      );
+    }
 
-    // Generate OTP
+    const existing = await OTP.findOne({ phone_number: fullPhone }).lean();
+    const lastSent = existing?.last_sent_at || existing?.created_at;
+    if (lastSent) {
+      const waitMs = PHONE_OTP_RESEND_COOLDOWN_MS - (Date.now() - new Date(lastSent).getTime());
+      if (waitMs > 0) {
+        return NextResponse.json(
+          {
+            error: `Please wait ${Math.ceil(waitMs / 1000)} seconds before requesting another code.`,
+            code: 'OTP_RATE_LIMITED',
+            retryAfterSeconds: Math.ceil(waitMs / 1000),
+          },
+          { status: 429 }
+        );
+      }
+    }
+
     const code = generateOTP();
+    const codeHash = hashOTP(fullPhone, code);
+    const now = new Date();
 
-    // Delete any existing OTP for this phone (cleanup)
-    await OTP.deleteMany({ phone_number: fullPhone });
+    const otpRecord = await OTP.findOneAndUpdate(
+      { phone_number: fullPhone },
+      {
+        $set: {
+          code_hash: codeHash,
+          attempts: 0,
+          last_sent_at: now,
+          created_at: now,
+        },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
 
-    // Create new OTP record
-    await OTP.create({
-      phone_number: fullPhone,
-      code,
-      attempts: 0,
-    });
-
-    // Send via SMS
-    await sendSMS(fullPhone, code);
+    let delivery;
+    try {
+      delivery = await sendOTP({ to: fullPhone, code });
+    } catch (err) {
+      await OTP.deleteOne({ _id: otpRecord._id }).catch(() => {});
+      throw err;
+    }
 
     return NextResponse.json({
       ok: true,
       message: 'OTP sent to your phone number',
+      ...(delivery?.devCode ? { devOtp: delivery.devCode } : {}),
     });
   } catch (err) {
     console.error('OTP request error:', err);

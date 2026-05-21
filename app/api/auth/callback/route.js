@@ -1,3 +1,5 @@
+export const runtime = 'nodejs';
+
 // OAuth callback no longer used — auth is handled via /api/auth/login
 import { NextResponse } from 'next/server';
 

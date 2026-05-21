@@ -1,3 +1,5 @@
+export const runtime = 'nodejs';
+
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import { getSession } from '@/lib/auth';

@@ -89,6 +89,21 @@ Optional settings used by current flows:
 NODE_ENV=development
 ```
 
+Email verification and production SMS delivery:
+
+```env
+APP_BASE_URL=https://your-app.example
+EMAIL_VERIFICATION_SECRET=replace-with-a-strong-secret
+SMTP_URL=smtp://user:pass@smtp.example.com:587
+SMTP_FROM="Wingman <no-reply@your-app.example>"
+
+PHONE_OTP_SECRET=replace-with-a-strong-secret
+TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_AUTH_TOKEN=replace-with-your-token
+TWILIO_FROM_PHONE_NUMBER=+15551234567
+# Or use TWILIO_MESSAGING_SERVICE_SID instead of TWILIO_FROM_PHONE_NUMBER
+```
+
 3. Run the app
 
 ```bash
@@ -111,21 +126,77 @@ This creates demo profiles and active delegations so you can test swiping immedi
 ## Scripts
 
 - `npm run dev` — start local dev server
+- `npm run dev:lan` — start local dev server reachable from phones on your network
 - `npm run build` — production build
 - `npm run start` — run production build
 - `npm run lint` — lint
+- `npm run native:dev` — start the Expo React Native app
+- `npm run native:ios` — start the Expo app on iOS simulator
+- `npm run native:ios:lan` — start iOS using the local network address
+- `npm run native:ios:tunnel` — start iOS through an Expo tunnel
+- `npm run native:android` — start the Expo app on Android emulator
+- `npm run native:android:lan` — start Android using the local network address
 - `npm run ios:add` — add iOS platform files via Capacitor
 - `npm run ios:sync` — sync Capacitor config/assets into iOS project
 - `npm run ios:open` — open iOS Xcode workspace
 - `npm run ios:refresh` — sync and open iOS project
 
+## React Native App
+
+This repo now includes a real Expo React Native client in `native/`. It reuses the existing Next.js API and MongoDB backend instead of duplicating matching, chat, auth, feed ranking, and invite-code logic.
+
+Run the backend first:
+
+```bash
+npm run dev
+```
+
+Then run the native app in another terminal:
+
+```bash
+npm run native:dev
+```
+
+By default, the native app talks to:
+
+- iOS simulator: `http://localhost:3000`
+- Android emulator: `http://10.0.2.2:3000`
+- physical phone over Expo LAN: `http://<your-computer-lan-ip>:3000`
+
+For a real phone on the same Wi-Fi, run:
+
+```bash
+npm run dev:lan
+npm run native:ios:lan
+```
+
+`native:ios:lan` detects your Mac's LAN IP, injects `EXPO_PUBLIC_API_BASE_URL=http://<your-mac-ip>:3000`, and clears Metro's cache. This prevents Expo Go from calling `127.0.0.1`, which means "the phone itself" on a real iPhone.
+
+If Expo says port `8081` is already running, stop the old Expo terminal first. An old Metro process can keep serving a stale bundle that still points at `127.0.0.1`.
+
+If your machine has multiple network interfaces, override the IP:
+
+```bash
+WINGMAN_LAN_IP=192.168.1.154 npm run native:ios:lan
+```
+
+To point the native app at another backend, set:
+
+```bash
+EXPO_PUBLIC_API_BASE_URL=https://your-api-domain.example npm run native:dev
+```
+
+The native client currently covers the core mobile product loop: email signup/login, profile setup and photo upload, invite code redemption, friend-powered swiping, match review, and chat.
+
+If the iOS simulator times out opening an `exp://192.168.x.x:8081` URL, use `npm run native:ios`. The iOS script is pinned to Expo's localhost mode so the simulator opens `exp://127.0.0.1:8081` instead of depending on LAN routing. Use `npm run native:ios:lan` or `npm run native:ios:tunnel` only when you intentionally want to test through a physical device or a tunnel.
+
 ## Auth Notes
 
 - Session is stored in an HTTP-only cookie named `wingman_session`
 - Route protection is enforced by middleware for authenticated pages
-- Email auth enforces `.edu` domain validation
+- Email auth enforces `.edu` domain validation and requires a 6-digit email verification code before login
 - Google Sign-In currently uses a hardcoded client ID in login/API files (consider moving to env vars)
-- Phone OTP currently logs OTP in development and is ready for SMS provider integration
+- Phone OTP stores hashed codes, rate-limits resends, expires codes after 10 minutes, and sends through Twilio when production credentials are configured. In development without Twilio, it logs the code.
 
 ## Important API Routes
 
@@ -133,6 +204,8 @@ Auth:
 
 - `POST /api/auth/signup`
 - `POST /api/auth/login`
+- `POST /api/auth/email/verify`
+- `POST /api/auth/email/resend`
 - `POST /api/auth/google`
 - `POST /api/auth/phone/request-otp`
 - `POST /api/auth/phone/verify-otp`
@@ -154,7 +227,7 @@ Feed/swipes/matches:
 ## Deployment Notes
 
 - Deploy as a standard Next.js app (e.g., Vercel)
-- Set `MONGODB_URI` and `JWT_SECRET` in deployment environment
+- Set `MONGODB_URI`, `JWT_SECRET`, SMTP, and Twilio variables in the deployment environment
 - Ensure cookie/domain behavior matches your production URL
 
 ## iOS Wrapper + App Store

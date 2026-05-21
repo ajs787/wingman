@@ -1,3 +1,5 @@
+export const runtime = 'nodejs';
+
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { connectDB } from '@/lib/mongodb';
@@ -8,7 +10,7 @@ import { getSession } from '@/lib/auth';
 import { BASIC_MAX_ACTIVE_DELEGATIONS } from '@/lib/constants';
 
 const redeemSchema = z.object({
-  code: z.string().min(1).max(20),
+  code: z.string().trim().length(8).regex(/^[A-Z0-9]+$/i),
 });
 
 export async function POST(request) {

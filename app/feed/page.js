@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import ThemeToggle from '@/components/theme-toggle';
 import Link from 'next/link';
-import { Users, Plus, Heart, ChevronRight, UserCircle, Sparkles, Drumstick, MessageCircle, Settings } from 'lucide-react';
+import { Users, Plus, Heart, ChevronRight, UserCircle, Sparkles, Bird, MessageCircle, Settings } from 'lucide-react';
 import { BASIC_MAX_ACTIVE_DELEGATIONS } from '@/lib/constants';
 
 export default function FeedPage() {
@@ -61,7 +61,7 @@ export default function FeedPage() {
       <div className="border-b border-black/5 px-6 py-5 bg-background sticky top-0 z-10">
         <div className="max-w-lg mx-auto flex items-center justify-between">
           <div className="flex items-center gap-1">
-            <Drumstick className="w-6 h-6 text-black" />
+            <Bird className="w-6 h-6 text-black" />
             <span className="text-2xl font-display font-bold tracking-wide text-black dark:text-[hsl(38_43%_92%)] -mt-1">Wingman</span>
           </div>
           <div className="flex items-center gap-1">
@@ -196,7 +196,7 @@ export default function FeedPage() {
       <div className="border-t border-black/5 px-4 py-4 sticky bottom-0 bg-background">
         <div className="max-w-lg mx-auto flex items-center gap-2 rounded-[1.75rem] border border-black/5 bg-background px-3 py-3 warm-nav-shell">
           <Link href="/feed" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-black bg-amber-100/80">
-            <Drumstick className="w-6 h-6" />
+            <Bird className="w-6 h-6" />
             <span className="text-xs font-medium">Feed</span>
           </Link>
           <Link href="/matches" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-slate-400 hover:text-slate-700 relative">

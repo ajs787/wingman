@@ -11,7 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { useDropzone } from 'react-dropzone';
-import { ArrowLeft, ArrowRight, Upload, X, GripVertical, Check, Copy, Drumstick, Plus } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Upload, X, GripVertical, Check, Copy, Bird, Plus } from 'lucide-react';
 import {
   US_COLLEGES,
   COMMON_MAJORS,
@@ -322,7 +322,7 @@ export default function OnboardingPage() {
       <div className="px-6 pt-8 pb-4 max-w-lg mx-auto w-full">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1">
-               <Drumstick className="w-6 h-6 text-black" />
+               <Bird className="w-6 h-6 text-black" />
                  <span className="text-2xl font-display font-bold tracking-wide text-black -mt-1">Wingman</span>
           </div>
           <span className="text-sm text-slate-400">Step {step} of {TOTAL_STEPS}</span>

@@ -1,3 +1,5 @@
+export const runtime = 'nodejs';
+
 import { NextResponse } from 'next/server';
 import { OAuth2Client } from 'google-auth-library';
 import { connectDB } from '@/lib/mongodb';
@@ -57,9 +59,25 @@ export async function POST(request) {
         email: emailLower,
         netid: email.split('@')[0],
         password_hash: null,
+        email_verified: true,
+        email_verified_at: new Date(),
         name: name || undefined,
       });
       isNewUser = true;
+    } else if (!user.email_verified) {
+      user.email_verified = true;
+      user.email_verified_at = new Date();
+      user.email_verification_code_hash = null;
+      user.email_verification_expires_at = null;
+      user.email_verification_sent_at = null;
+      await user.save();
+    }
+
+    if (user.account_status === 'suspended' || user.account_status === 'banned') {
+      return NextResponse.json(
+        { error: 'This account is not currently available.' },
+        { status: 403 }
+      );
     }
 
     const token = signToken({
@@ -74,6 +92,7 @@ export async function POST(request) {
       netid: user.netid,
       email: emailLower,
       hasProfile: !!user.name && user.photos?.length > 0,
+      sessionToken: token,
     });
 
     setSessionCookie(response, token);

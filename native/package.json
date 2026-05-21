@@ -1,0 +1,38 @@
+{
+  "name": "wingman-native",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "expo start --localhost",
+    "start:lan": "expo start --lan",
+    "start:tunnel": "expo start --tunnel",
+    "android": "expo start --android --localhost",
+    "android:lan": "expo start --android --lan",
+    "ios": "expo start --ios --localhost",
+    "ios:lan": "expo start --ios --lan",
+    "ios:tunnel": "expo start --ios --tunnel",
+    "web": "expo start --web"
+  },
+  "dependencies": {
+    "@expo-google-fonts/bricolage-grotesque": "^0.4.1",
+    "@expo-google-fonts/manrope": "^0.4.2",
+    "@expo/metro-runtime": "~5.0.5",
+    "@expo/vector-icons": "14.1.0",
+    "@react-native-async-storage/async-storage": "2.1.2",
+    "expo": "~53.0.22",
+    "expo-asset": "~11.1.7",
+    "expo-constants": "~17.1.8",
+    "expo-file-system": "~18.1.11",
+    "expo-font": "~13.3.2",
+    "expo-image-picker": "~16.1.4",
+    "expo-keep-awake": "~14.1.4",
+    "expo-status-bar": "~2.2.3",
+    "lucide-react-native": "^1.14.0",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "react-native": "0.79.6",
+    "react-native-svg": "15.11.2",
+    "react-native-web": "^0.20.0"
+  },
+  "private": true
+}

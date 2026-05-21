@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Drumstick, Phone, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { Bird, Phone, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 
 function AuthForm() {
   const router = useRouter();
@@ -26,6 +26,9 @@ function AuthForm() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState(searchParams.get('verify') || '');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verificationNotice, setVerificationNotice] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
@@ -90,6 +93,74 @@ function AuthForm() {
     setConfirm('');
     setOtpSent(false);
     setOtp('');
+    setPendingVerificationEmail('');
+    setVerificationCode('');
+    setVerificationNotice('');
+  }
+
+  async function handleEmailVerify(e) {
+    e.preventDefault();
+    setError('');
+    setVerificationNotice('');
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/email/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: pendingVerificationEmail.trim().toLowerCase(), code: verificationCode }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Email verification failed');
+        return;
+      }
+
+      localStorage.setItem('wingman_user', JSON.stringify({
+        userId: data.userId,
+        email: data.email,
+        netid: data.netid,
+      }));
+
+      const next = searchParams.get('next');
+      if (next && next.startsWith('/')) {
+        router.push(next);
+      } else if (data.hasProfile) {
+        router.push('/feed');
+      } else {
+        router.push('/onboarding');
+      }
+    } catch {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleEmailResend() {
+    setError('');
+    setVerificationNotice('');
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/email/resend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: pendingVerificationEmail.trim().toLowerCase() }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Could not resend verification code');
+        return;
+      }
+
+      if (data.devVerificationCode) setVerificationCode(data.devVerificationCode);
+      setVerificationNotice(data.alreadyVerified ? 'Email is already verified. Try logging in.' : 'A new code was sent.');
+    } catch {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handlePhoneRequestOTP(e) {
@@ -175,7 +246,19 @@ function AuthForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Something went wrong.');
+        if (data.code === 'EMAIL_NOT_VERIFIED') {
+          setPendingVerificationEmail(data.email || email.trim().toLowerCase());
+          setVerificationNotice('Verify your email before logging in.');
+        } else {
+          setError(data.error || 'Something went wrong.');
+        }
+        return;
+      }
+
+      if (data.requiresEmailVerification) {
+        setPendingVerificationEmail(data.email);
+        if (data.devVerificationCode) setVerificationCode(data.devVerificationCode);
+        setVerificationNotice('Enter the 6-digit code we sent to your school email.');
         return;
       }
 
@@ -225,9 +308,62 @@ function AuthForm() {
           {/* Logo - clickable */}
           <Link href="/" className="flex justify-center mb-8">
             <div className="w-12 h-12 rounded-2xl bg-black flex items-center justify-center shadow-lg shadow-gray-400 hover:bg-gray-800 transition-colors">
-              <Drumstick className="w-6 h-6 text-white" />
+              <Bird className="w-6 h-6 text-white" />
             </div>
           </Link>
+
+        {pendingVerificationEmail && (
+          <form onSubmit={handleEmailVerify} className="space-y-4">
+            <h1 className="text-2xl font-bold text-slate-900 text-center mb-1">Verify your email</h1>
+            <p className="text-slate-400 text-center text-sm mb-6">
+              Enter the 6-digit code sent to {pendingVerificationEmail}.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="email-code">Verification code</Label>
+              <Input
+                id="email-code"
+                type="text"
+                placeholder="000000"
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                maxLength="6"
+                required
+                className="h-12 text-center text-lg font-mono tracking-widest"
+              />
+            </div>
+            {verificationNotice && (
+              <div className="bg-slate-50 text-slate-700 text-sm px-4 py-3 rounded-xl border border-slate-100">
+                {verificationNotice}
+              </div>
+            )}
+            {error && (
+              <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-xl border border-red-100">
+                {error}
+              </div>
+            )}
+            <Button type="submit" size="lg" className="w-full" disabled={loading || verificationCode.length !== 6}>
+              {loading ? 'Verifying...' : 'Verify email'}
+            </Button>
+            <Button type="button" variant="outline" size="lg" className="w-full" onClick={handleEmailResend} disabled={loading}>
+              Resend code
+            </Button>
+            <button
+              type="button"
+              onClick={() => {
+                setPendingVerificationEmail('');
+                setVerificationCode('');
+                setVerificationNotice('');
+                setError('');
+              }}
+              className="w-full text-sm text-slate-500 hover:text-slate-700"
+            >
+              Back to login
+            </button>
+          </form>
+        )}
+
+        {!pendingVerificationEmail && (
+        <>
 
         {/* Mode toggle */}
         <div className="flex rounded-xl border border-slate-200 p-1 mb-8 bg-slate-50">
@@ -452,6 +588,8 @@ function AuthForm() {
             {isSignup ? 'Log in' : 'Sign up'}
           </button>
         </p>
+        </>
+        )}
         </div>
       </div>
     </div>

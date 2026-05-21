@@ -1,3 +1,5 @@
+export const runtime = 'nodejs';
+
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { connectDB } from '@/lib/mongodb';
@@ -44,6 +46,24 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Incorrect password.' }, { status: 401 });
   }
 
+  if (!user.email_verified) {
+    return NextResponse.json(
+      {
+        error: 'Please verify your email before logging in.',
+        code: 'EMAIL_NOT_VERIFIED',
+        email,
+      },
+      { status: 403 }
+    );
+  }
+
+  if (user.account_status === 'suspended' || user.account_status === 'banned') {
+    return NextResponse.json(
+      { error: 'This account is not currently available.' },
+      { status: 403 }
+    );
+  }
+
   const netid = user.netid;
   const token = signToken({ sub: user._id.toString(), email, netid });
 
@@ -53,6 +73,7 @@ export async function POST(request) {
     netid,
     email,
     hasProfile: !!user.name,
+    sessionToken: token,
   });
 
   setSessionCookie(response, token);

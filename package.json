@@ -4,13 +4,20 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:lan": "next dev -H 0.0.0.0",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "ios:add": "npx cap add ios",
     "ios:sync": "npx cap sync ios",
     "ios:open": "npx cap open ios",
-    "ios:refresh": "npx cap sync ios && npx cap open ios"
+    "ios:refresh": "npx cap sync ios && npx cap open ios",
+    "native:dev": "npm --prefix native start",
+    "native:ios": "npm --prefix native run ios",
+    "native:ios:lan": "node scripts/start-native-phone.mjs ios",
+    "native:ios:tunnel": "npm --prefix native run ios:tunnel",
+    "native:android": "npm --prefix native run android",
+    "native:android:lan": "node scripts/start-native-phone.mjs android"
   },
   "dependencies": {
     "@capacitor/cli": "^7.6.2",

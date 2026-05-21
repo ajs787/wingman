@@ -1,8 +1,11 @@
+export const runtime = 'nodejs';
+
 import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import { connectDB } from '@/lib/mongodb';
 import Match from '@/lib/models/Match';
 import Delegation from '@/lib/models/Delegation';
+import Swipe from '@/lib/models/Swipe';
 import User from '@/lib/models/User';
 import { getSession } from '@/lib/auth';
 import { getBlockedUserIds } from '@/lib/safety/blocking';
@@ -122,6 +125,31 @@ export async function GET(request) {
     };
   });
 
+  const rightSwipes = await Swipe.find({
+    owner_user_id: ownerId,
+    target_user_id: { $in: otherIds },
+    direction: 'right',
+  })
+    .populate('delegate_user_id', 'name first_name last_name email photos')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const swipersByTarget = {};
+  rightSwipes.forEach((swipe) => {
+    const targetId = swipe.target_user_id.toString();
+    const delegate = swipe.delegate_user_id;
+    const delegateId = delegate?._id?.toString();
+    const mainPhoto = delegate?.photos?.sort((a, b) => a.position - b.position)?.[0];
+    if (!swipersByTarget[targetId]) swipersByTarget[targetId] = [];
+    swipersByTarget[targetId].push({
+      _id: delegateId,
+      name: delegate?.name || [delegate?.first_name, delegate?.last_name].filter(Boolean).join(' ') || delegate?.email || 'Friend',
+      photo: delegateId && mainPhoto ? photoUrl(mainPhoto, delegateId) : null,
+      friend_note: swipe.friend_note || null,
+      likedAt: swipe.createdAt,
+    });
+  });
+
   const matches = matchRows.map((m) => {
     const isUserA = m.user_a.toString() === ownerId;
     const otherId = isUserA ? m.user_b.toString() : m.user_a.toString();
@@ -141,6 +169,7 @@ export async function GET(request) {
       otherStatus: otherStatus || 'pending',
       canChat: myStatus === 'accepted' && otherStatus === 'accepted',
       matchedBy: matchedById ? delegateMap[matchedById] ?? null : null,
+      matchedByList: swipersByTarget[otherId] || [],
     };
   });
 

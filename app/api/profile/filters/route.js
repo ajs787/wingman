@@ -1,3 +1,5 @@
+export const runtime = 'nodejs';
+
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { connectDB } from '@/lib/mongodb';
@@ -19,7 +21,7 @@ const filtersSchema = z.object({
     gender_dealbreaker: z.boolean().optional(),
     races: z.array(z.string()).optional(),
     races_dealbreaker: z.boolean().optional(),
-    distance_miles: z.number().optional(),
+    distance_miles: z.number().int().min(5).max(100).optional(),
     distance_dealbreaker: z.boolean().optional(),
   }),
 });

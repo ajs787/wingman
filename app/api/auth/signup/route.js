@@ -1,10 +1,11 @@
+export const runtime = 'nodejs';
+
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { connectDB } from '@/lib/mongodb';
 import User from '@/lib/models/User';
-import { signToken } from '@/lib/auth';
-import { setSessionCookie } from '@/lib/auth-cookies';
 import { signupSchema } from '@/lib/validations';
+import { createEmailVerificationPayload, sendEmailVerification } from '@/lib/email-verification';
 
 export async function POST(request) {
   let body;
@@ -27,10 +28,20 @@ export async function POST(request) {
   // Use email as netid to guarantee uniqueness
   const netid = email;
   const password_hash = await bcrypt.hash(password, 12);
+  const verification = createEmailVerificationPayload(email);
 
   let user;
   try {
-    user = await User.create({ email, netid, password_hash });
+    user = await User.create({
+      email,
+      netid,
+      password_hash,
+      email_verified: false,
+      email_verified_at: null,
+      email_verification_code_hash: verification.codeHash,
+      email_verification_expires_at: verification.expiresAt,
+      email_verification_sent_at: verification.sentAt,
+    });
   } catch (err) {
     // Log the FULL error for debugging
     console.error('=== SIGNUP ERROR ===');
@@ -50,7 +61,16 @@ export async function POST(request) {
       if (keyPattern.netid && !keyPattern.email) {
         try {
           const uniqueNetid = `${email}_${Date.now()}`;
-          user = await User.create({ email, netid: uniqueNetid, password_hash });
+          user = await User.create({
+            email,
+            netid: uniqueNetid,
+            password_hash,
+            email_verified: false,
+            email_verified_at: null,
+            email_verification_code_hash: verification.codeHash,
+            email_verification_expires_at: verification.expiresAt,
+            email_verification_sent_at: verification.sentAt,
+          });
         } catch (retryErr) {
           console.error('Retry also failed:', retryErr);
           if (retryErr.code === 11000) {
@@ -76,7 +96,17 @@ export async function POST(request) {
     }
   }
 
-  const token = signToken({ sub: user._id.toString(), email, netid: user.netid });
+  let delivery;
+  try {
+    delivery = await sendEmailVerification({ to: email, code: verification.code });
+  } catch (err) {
+    await User.findByIdAndDelete(user._id).catch(() => {});
+    console.error('Email verification send failed:', err);
+    return NextResponse.json(
+      { error: 'Could not send verification email. Please try again.' },
+      { status: 500 }
+    );
+  }
 
   const response = NextResponse.json({
     ok: true,
@@ -84,9 +114,9 @@ export async function POST(request) {
     netid: user.netid,
     email,
     hasProfile: false,
+    requiresEmailVerification: true,
+    ...(delivery?.devCode ? { devVerificationCode: delivery.devCode } : {}),
   });
-
-  setSessionCookie(response, token);
 
   return response;
 }

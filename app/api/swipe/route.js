@@ -1,3 +1,5 @@
+export const runtime = 'nodejs';
+
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import mongoose from 'mongoose';
@@ -67,40 +69,51 @@ export async function POST(request) {
   let likeResetAt = null;
 
   if (direction === 'right') {
-    const quotaState = await refreshLikeQuotaIfNeeded(User, owner_user_id);
-    if (!quotaState) {
-      return NextResponse.json({ error: 'Owner not found.' }, { status: 404 });
-    }
+    const existingOwnerRight = await Swipe.findOne({
+      owner_user_id,
+      target_user_id,
+      direction: 'right',
+    }).select('_id').lean();
 
-    likeResetAt = quotaState.resetAt;
-
-    if (!quotaState.unlimited) {
-      const reserved = await User.findOneAndUpdate(
-        { _id: owner_user_id, likes_remaining: { $gt: 0 } },
-        { $inc: { likes_remaining: -1 } },
-        { new: true }
-      ).select('likes_remaining last_like_reset').lean();
-
-      if (!reserved) {
-        const ownerState = await User.findById(owner_user_id).select('likes_remaining last_like_reset').lean();
-        return NextResponse.json(
-          {
-            error: 'Daily like limit reached. Try again after reset.',
-            code: 'LIKE_LIMIT_REACHED',
-            likesRemaining: ownerState?.likes_remaining ?? 0,
-            resetAt: ownerState?.last_like_reset ? getNextResetAt(ownerState.last_like_reset).toISOString() : null,
-          },
-          { status: 429 }
-        );
+    if (existingOwnerRight) {
+      likesRemainingAfterReserve = null;
+      likeResetAt = null;
+    } else {
+      const quotaState = await refreshLikeQuotaIfNeeded(User, owner_user_id);
+      if (!quotaState) {
+        return NextResponse.json({ error: 'Owner not found.' }, { status: 404 });
       }
 
-      reservedLike = true;
-      likesRemainingAfterReserve = reserved.likes_remaining;
-      likeResetAt = reserved.last_like_reset ? getNextResetAt(reserved.last_like_reset).toISOString() : null;
+      likeResetAt = quotaState.resetAt;
+
+      if (!quotaState.unlimited) {
+        const reserved = await User.findOneAndUpdate(
+          { _id: owner_user_id, likes_remaining: { $gt: 0 } },
+          { $inc: { likes_remaining: -1 } },
+          { new: true }
+        ).select('likes_remaining last_like_reset').lean();
+
+        if (!reserved) {
+          const ownerState = await User.findById(owner_user_id).select('likes_remaining last_like_reset').lean();
+          return NextResponse.json(
+            {
+              error: 'Daily like limit reached. Try again after reset.',
+              code: 'LIKE_LIMIT_REACHED',
+              likesRemaining: ownerState?.likes_remaining ?? 0,
+              resetAt: ownerState?.last_like_reset ? getNextResetAt(ownerState.last_like_reset).toISOString() : null,
+            },
+            { status: 429 }
+          );
+        }
+
+        reservedLike = true;
+        likesRemainingAfterReserve = reserved.likes_remaining;
+        likeResetAt = reserved.last_like_reset ? getNextResetAt(reserved.last_like_reset).toISOString() : null;
+      }
     }
   }
 
-  // Insert swipe (unique on owner+target)
+  // Insert swipe. Each wingman gets an independent vote for the same owner+target pair.
   let swipe;
   try {
     swipe = await Swipe.create({
