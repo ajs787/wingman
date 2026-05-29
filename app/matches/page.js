@@ -107,7 +107,7 @@ function MatchCard({ match, onAccept, onReject }) {
       {match.friendNote && (
         <div className="px-5 py-4 border-b border-slate-100 bg-slate-50">
           <p className="text-xs text-slate-500 font-medium mb-1">Note from your friend:</p>
-          <p className="text-sm text-slate-700 italic">"{match.friendNote}"</p>
+          <p className="text-sm text-slate-700 italic">&ldquo;{match.friendNote}&rdquo;</p>
         </div>
       )}
 

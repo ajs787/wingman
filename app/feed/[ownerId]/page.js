@@ -200,7 +200,7 @@ function ProfileCard({ candidate, onPass, onLike, swiping = false }) {
           <div className="w-full bg-white rounded-t-3xl p-6 space-y-4">
             <h3 className="text-lg font-bold text-slate-800">Add a note for {candidate.name}?</h3>
             <p className="text-sm text-slate-500">
-              Tell them why you think they'd be a good match for your friend (optional)
+              Tell them why you think they&apos;d be a good match for your friend (optional)
             </p>
             <textarea
               value={friendNote}

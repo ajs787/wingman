@@ -335,7 +335,7 @@ export default function OnboardingPage() {
         {step === 1 && (
           <div className="space-y-5 py-6">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">Let's build your profile</h2>
+              <h2 className="text-2xl font-bold text-slate-900">Let&apos;s build your profile</h2>
               <p className="text-slate-500 mt-1">Basic info your friends will use to swipe for you.</p>
               <p className="text-xs text-slate-400 mt-2">All selections are editable later in your profile settings.</p>
             </div>
@@ -494,7 +494,7 @@ export default function OnboardingPage() {
             <div className="space-y-4">
               <div>
                 <h2 className="text-2xl font-bold text-slate-900">
-                  What's your personality type? <span className="text-sm font-normal text-slate-400">(optional)</span>
+                  What&apos;s your personality type? <span className="text-sm font-normal text-slate-400">(optional)</span>
                 </h2>
                 <p className="text-slate-500 mt-1">Pick one that best describes you.</p>
               </div>

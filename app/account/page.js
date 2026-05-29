@@ -121,7 +121,7 @@ export default function AccountSettingsPage() {
                 <div>
                   <Label className="text-sm font-medium text-slate-800">Hide my profile</Label>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Your profile won't appear in others' feeds
+                    Your profile won&apos;t appear in others&apos; feeds
                   </p>
                 </div>
               </div>
