@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import Link from 'next/link';
-import { ArrowLeft, Eye, EyeOff, Trash2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Trash2, AlertTriangle, Crown, ChevronRight } from 'lucide-react';
 
 export default function AccountSettingsPage() {
   const router = useRouter();
@@ -18,6 +18,7 @@ export default function AccountSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [subscription, setSubscription] = useState(null);
 
   // Settings state
   const [hidden, setHidden] = useState(false);
@@ -27,12 +28,19 @@ export default function AccountSettingsPage() {
   useEffect(() => {
     async function loadSettings() {
       try {
-        const res = await fetch('/api/account');
+        const [res, subRes] = await Promise.all([
+          fetch('/api/account'),
+          fetch('/api/subscription'),
+        ]);
         if (res.ok) {
           const { settings } = await res.json();
           setHidden(settings.hidden ?? false);
           setShowAge(settings.show_age ?? true);
           setShowSchool(settings.show_school ?? true);
+        }
+        if (subRes.ok) {
+          const { subscription: subData } = await subRes.json();
+          setSubscription(subData);
         }
       } catch {}
       setLoading(false);
@@ -85,16 +93,18 @@ export default function AccountSettingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-slate-400">Loading...</p>
       </div>
     );
   }
 
+  const isPro = subscription?.isPro;
+
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="border-b border-slate-100 px-6 py-5 sticky top-0 bg-white z-10">
+      <div className="border-b border-black/5 px-6 py-5 sticky top-0 bg-background z-10">
         <div className="max-w-lg mx-auto flex items-center gap-3">
           <Link href="/feed">
             <Button variant="ghost" size="icon">
@@ -102,7 +112,7 @@ export default function AccountSettingsPage() {
             </Button>
           </Link>
           <div className="flex-1">
-            <h1 className="text-xl font-bold text-slate-900">Account Settings</h1>
+            <h1 className="text-xl font-display font-bold text-slate-900">Account Settings</h1>
             <p className="text-xs text-slate-400">Privacy and account management</p>
           </div>
         </div>
@@ -110,12 +120,38 @@ export default function AccountSettingsPage() {
 
       <div className="max-w-lg mx-auto px-6 py-8 space-y-8">
 
+        {/* Wingman Pro */}
+        <section>
+          <Link href="/wingman-pro">
+            <div className={`group flex items-center gap-4 rounded-[1.5rem] p-5 transition-all cursor-pointer ${
+              isPro
+                ? 'bg-gradient-to-br from-amber-400 via-orange-400 to-orange-500 text-white shadow-[0_20px_55px_-28px_rgba(234,88,12,0.6)]'
+                : 'border border-black/5 bg-background hover:border-orange-200 hover:bg-amber-50/60 shadow-[0_16px_45px_-30px_rgba(119,77,24,0.3)]'
+            }`}>
+              <div className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl ${
+                isPro ? 'bg-white/25 ring-1 ring-white/40' : 'bg-amber-100 dark:bg-orange-400/15'
+              }`}>
+                <Crown className={`h-6 w-6 ${isPro ? 'text-white' : 'text-orange-500'}`} />
+              </div>
+              <div className="flex-1">
+                <p className={`font-display font-bold ${isPro ? 'text-white' : 'text-slate-800'}`}>
+                  {isPro ? 'Wingman Pro' : 'Upgrade to Wingman Pro'}
+                </p>
+                <p className={`text-xs mt-0.5 ${isPro ? 'text-white/85' : 'text-slate-400'}`}>
+                  {isPro ? 'Active · Manage your plan' : 'Unlimited likes, more friends & more'}
+                </p>
+              </div>
+              <ChevronRight className={`h-5 w-5 ${isPro ? 'text-white/80' : 'text-slate-300 group-hover:text-slate-600'}`} />
+            </div>
+          </Link>
+        </section>
+
         {/* Privacy Settings */}
         <section>
           <h2 className="text-base font-semibold text-slate-800 mb-4">Privacy</h2>
           <div className="space-y-4">
             {/* Hide Profile */}
-            <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 bg-slate-50/50">
+            <div className="flex items-center justify-between p-4 rounded-2xl border border-black/5 bg-muted/40">
               <div className="flex items-center gap-3">
                 {hidden ? <EyeOff className="w-5 h-5 text-slate-500" /> : <Eye className="w-5 h-5 text-slate-500" />}
                 <div>
@@ -129,7 +165,7 @@ export default function AccountSettingsPage() {
             </div>
 
             {/* Show Age */}
-            <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 bg-slate-50/50">
+            <div className="flex items-center justify-between p-4 rounded-2xl border border-black/5 bg-muted/40">
               <div>
                 <Label className="text-sm font-medium text-slate-800">Show my age</Label>
                 <p className="text-xs text-slate-400 mt-0.5">Display your age on your profile</p>
@@ -138,7 +174,7 @@ export default function AccountSettingsPage() {
             </div>
 
             {/* Show School */}
-            <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 bg-slate-50/50">
+            <div className="flex items-center justify-between p-4 rounded-2xl border border-black/5 bg-muted/40">
               <div>
                 <Label className="text-sm font-medium text-slate-800">Show my school</Label>
                 <p className="text-xs text-slate-400 mt-0.5">Display your school on your profile</p>

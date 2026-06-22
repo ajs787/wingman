@@ -207,9 +207,11 @@ export default function MyMatchesPage() {
 
   async function loadMatches() {
     try {
-      const u = JSON.parse(localStorage.getItem('wingman_user') || '{}');
-      if (!u.userId) { setLoading(false); return; }
-      const res = await fetch(`/api/matches?ownerId=${u.userId}`);
+      const profileRes = await fetch('/api/profile');
+      if (!profileRes.ok) { setLoading(false); return; }
+      const { profile } = await profileRes.json();
+      if (!profile?._id) { setLoading(false); return; }
+      const res = await fetch(`/api/matches?ownerId=${profile._id}`);
       if (res.ok) {
         const { matches: data } = await res.json();
         setMatches(data ?? []);

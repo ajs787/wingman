@@ -9,7 +9,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
-import { ArrowLeft, X, Heart, SlidersHorizontal, Cake, Magnet, Ruler, MapPin, Leaf, Pill, School, BookOpen, Brain } from 'lucide-react';
+import { ArrowLeft, X, Heart, SlidersHorizontal, Cake, Magnet, Ruler, MapPin, Leaf, Pill, School, BookOpen, Brain, Sparkles } from 'lucide-react';
 import { US_COLLEGES, COMMON_MAJORS, CLASS_YEARS, GENDERS, RACE_ETHNICITY_OPTIONS } from '@/lib/constants';
 
 function ProfileCard({ candidate, onPass, onLike, swiping = false }) {
@@ -87,6 +87,14 @@ function ProfileCard({ candidate, onPass, onLike, swiping = false }) {
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+
+          {typeof candidate.ranking?.compatibility === 'number' && (
+            <div className="absolute top-3 left-3 flex items-center gap-1.5 rounded-full bg-black/55 backdrop-blur-md px-3 py-1.5 ring-1 ring-white/20">
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <span className="text-white text-xs font-bold tracking-tight">{candidate.ranking.compatibility}% match</span>
+            </div>
+          )}
+
           <div className="absolute bottom-0 left-0 right-0 p-5">
             <h3 className="text-white text-2xl font-bold">
               {candidate.name}
@@ -94,6 +102,18 @@ function ProfileCard({ candidate, onPass, onLike, swiping = false }) {
             <p className="text-white/80 text-sm mt-0.5">
               {candidate.school || candidate.year} · {candidate.majors?.join(', ') || candidate.major}
             </p>
+            {candidate.ranking?.explainability?.reasons?.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {candidate.ranking.explainability.reasons.slice(0, 3).map((reason) => (
+                  <span
+                    key={reason}
+                    className="rounded-full bg-white/15 backdrop-blur-sm px-2.5 py-0.5 text-[11px] font-medium text-white capitalize"
+                  >
+                    {reason}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -532,6 +552,8 @@ export default function OwnerFeedPage() {
   const [swiping, setSwiping] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({});
+  // null until the first like response; null likesRemaining from the API means unlimited (Pro).
+  const [likesRemaining, setLikesRemaining] = useState(undefined);
 
   useEffect(() => {
     async function load() {
@@ -613,8 +635,23 @@ export default function OwnerFeedPage() {
           friend_note: friendNote || undefined,
         }),
       });
+      const data = await res.json().catch(() => ({}));
+
+      // Owner is out of daily likes — nudge toward Pro, keep the card in place.
+      if (res.status === 429) {
+        toast({
+          title: 'Out of likes for today',
+          description: `${ownerProfile?.name ?? 'Your friend'} is out of daily likes. Upgrade to Wingman Pro for unlimited likes.`,
+          variant: 'destructive',
+        });
+        setSwiping(false);
+        return;
+      }
+
       if (res.ok) {
-        const data = await res.json();
+        if (data.likeQuota) {
+          setLikesRemaining(data.likeQuota.likesRemaining);
+        }
         if (data.matched) {
           toast({
             title: "It's a match!",
@@ -690,6 +727,20 @@ export default function OwnerFeedPage() {
             <SlidersHorizontal className="w-4 h-4" />
           </Button>
         </div>
+        {likesRemaining !== undefined && (
+          <div className="max-w-sm mx-auto mt-2 flex justify-center">
+            {likesRemaining === null ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/15 px-3 py-1 text-xs font-medium text-amber-300">
+                <Sparkles className="w-3 h-3" /> Unlimited likes · Pro
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300">
+                <Heart className="w-3 h-3" />
+                {likesRemaining} {likesRemaining === 1 ? 'like' : 'likes'} left today
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Content */}

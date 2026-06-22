@@ -286,7 +286,7 @@ function AuthForm() {
   const isSignup = mode === 'signup';
 
   return (
-    <div className="min-h-screen flex flex-col bg-white px-6">
+    <div className="min-h-screen flex flex-col bg-background px-6">
       <Script
         src="https://accounts.google.com/gsi/client"
         async
@@ -570,7 +570,7 @@ function AuthForm() {
             <div className="w-full border-t border-slate-200"></div>
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="px-2 bg-white text-slate-500">or continue with</span>
+            <span className="px-2 bg-background text-slate-500">or continue with</span>
           </div>
         </div>
 

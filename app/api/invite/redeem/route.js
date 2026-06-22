@@ -7,7 +7,7 @@ import InviteCode from '@/lib/models/InviteCode';
 import Delegation from '@/lib/models/Delegation';
 import User from '@/lib/models/User';
 import { getSession } from '@/lib/auth';
-import { BASIC_MAX_ACTIVE_DELEGATIONS } from '@/lib/constants';
+import { maxActiveDelegations, isProTier } from '@/lib/subscription';
 
 const redeemSchema = z.object({
   code: z.string().trim().length(8).regex(/^[A-Z0-9]+$/i),
@@ -42,17 +42,25 @@ export async function POST(request) {
     return NextResponse.json({ error: 'You cannot be your own wingman.' }, { status: 400 });
   }
 
-  const activeDelegations = await Delegation.countDocuments({
-    delegate_user_id: session.sub,
-    status: 'active',
-  });
+  const [activeDelegations, redeemer] = await Promise.all([
+    Delegation.countDocuments({
+      delegate_user_id: session.sub,
+      status: 'active',
+    }),
+    User.findById(session.sub).select('subscription_tier').lean(),
+  ]);
 
-  if (activeDelegations >= BASIC_MAX_ACTIVE_DELEGATIONS) {
+  const delegationLimit = maxActiveDelegations(redeemer?.subscription_tier);
+
+  if (activeDelegations >= delegationLimit) {
     return NextResponse.json(
       {
-        error: `You can swipe for up to ${BASIC_MAX_ACTIVE_DELEGATIONS} friends at a time on the basic version. Revoke one first to add another.`,
+        error: isProTier(redeemer?.subscription_tier)
+          ? `You can swipe for up to ${delegationLimit} friends at a time. Revoke one first to add another.`
+          : `You can swipe for up to ${delegationLimit} friends at a time on the free plan. Upgrade to Wingman Pro to swipe for more, or revoke one first.`,
         code: 'DELEGATION_LIMIT_REACHED',
-        limit: BASIC_MAX_ACTIVE_DELEGATIONS,
+        limit: delegationLimit,
+        upgrade: !isProTier(redeemer?.subscription_tier),
       },
       { status: 403 }
     );

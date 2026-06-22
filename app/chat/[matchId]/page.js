@@ -227,9 +227,9 @@ export default function ChatPage() {
   }, {});
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="border-b border-slate-100 px-4 py-3 sticky top-0 bg-white z-10">
+      <div className="border-b border-black/5 px-4 py-3 sticky top-0 bg-background z-10">
         <div className="max-w-lg mx-auto flex items-center gap-3">
           <Link href="/chat">
             <Button variant="ghost" size="icon">
@@ -357,7 +357,7 @@ export default function ChatPage() {
       </div>
 
       {/* Input */}
-      <div className="border-t border-slate-100 px-4 py-3 sticky bottom-0 bg-white">
+      <div className="border-t border-black/5 px-4 py-3 sticky bottom-0 bg-background">
         <form onSubmit={handleSend} className="max-w-lg mx-auto flex items-end gap-2">
           <div className="flex-1 relative">
             <textarea

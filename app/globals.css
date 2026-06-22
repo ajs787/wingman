@@ -1,9 +1,13 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
+    --font-display: 'Bricolage Grotesque';
+    --font-body: 'Manrope';
     --background: 38 43% 92%;
     --foreground: 24 12% 14%;
     --card: 0 0% 100%;
