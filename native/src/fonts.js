@@ -1,40 +1,42 @@
 import {
-  BricolageGrotesque_400Regular,
-  BricolageGrotesque_500Medium,
-  BricolageGrotesque_600SemiBold,
-  BricolageGrotesque_700Bold,
-  BricolageGrotesque_800ExtraBold,
-} from '@expo-google-fonts/bricolage-grotesque';
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+  Poppins_800ExtraBold,
+  Poppins_900Black,
+} from '@expo-google-fonts/poppins';
 import {
-  Manrope_400Regular,
-  Manrope_500Medium,
-  Manrope_600SemiBold,
-  Manrope_700Bold,
-  Manrope_800ExtraBold,
-} from '@expo-google-fonts/manrope';
+  DMMono_400Regular,
+  DMMono_500Medium,
+} from '@expo-google-fonts/dm-mono';
 
 export const fontAssets = {
-  BricolageGrotesque_400Regular,
-  BricolageGrotesque_500Medium,
-  BricolageGrotesque_600SemiBold,
-  BricolageGrotesque_700Bold,
-  BricolageGrotesque_800ExtraBold,
-  Manrope_400Regular,
-  Manrope_500Medium,
-  Manrope_600SemiBold,
-  Manrope_700Bold,
-  Manrope_800ExtraBold,
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+  Poppins_800ExtraBold,
+  Poppins_900Black,
+  DMMono_400Regular,
+  DMMono_500Medium,
 };
 
+// Brand type system: Poppins carries display + UI + body; DM Mono is the
+// uppercase "eyebrow"/metadata accent. Keys stay stable so existing styles
+// repoint automatically.
 export const fonts = {
-  body: 'Manrope_400Regular',
-  bodyMedium: 'Manrope_500Medium',
-  bodySemiBold: 'Manrope_600SemiBold',
-  bodyBold: 'Manrope_700Bold',
-  bodyExtraBold: 'Manrope_800ExtraBold',
-  display: 'BricolageGrotesque_700Bold',
-  displayRegular: 'BricolageGrotesque_400Regular',
-  displayMedium: 'BricolageGrotesque_500Medium',
-  displaySemiBold: 'BricolageGrotesque_600SemiBold',
-  displayExtraBold: 'BricolageGrotesque_800ExtraBold',
+  body: 'Poppins_400Regular',
+  bodyMedium: 'Poppins_500Medium',
+  bodySemiBold: 'Poppins_600SemiBold',
+  bodyBold: 'Poppins_700Bold',
+  bodyExtraBold: 'Poppins_800ExtraBold',
+  display: 'Poppins_800ExtraBold',
+  displayRegular: 'Poppins_400Regular',
+  displayMedium: 'Poppins_500Medium',
+  displaySemiBold: 'Poppins_600SemiBold',
+  displayExtraBold: 'Poppins_900Black',
+  // DM Mono accent (eyebrows, labels, metadata)
+  mono: 'DMMono_400Regular',
+  monoMedium: 'DMMono_500Medium',
 };

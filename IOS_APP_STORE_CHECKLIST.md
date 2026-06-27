@@ -1,58 +1,74 @@
 # iOS App Store Deployment Checklist (Wingman)
 
-## 1) Production URL and environment
+iOS ships as a **native React Native app (Expo)** in `native/`, not a Capacitor/WebView
+wrapper. The screens are React Native components that call the Next.js API over HTTPS.
+Bundle identifier: `com.wingman.mobile` (see `native/app.json`).
 
-- [ ] Deploy web app to production (HTTPS) and confirm it is stable on mobile Safari.
-- [ ] Set `CAPACITOR_SERVER_URL` to your production URL before syncing iOS.
-- [ ] Set production env vars for backend:
+## 1) Backend / production API
+
+- [ ] Deploy the Next.js API to production over **HTTPS** (e.g., Vercel).
+- [ ] Set production backend env vars:
   - `MONGODB_URI`
-  - `JWT_SECRET`
-  - Google/Twilio/email provider secrets
-- [ ] Confirm your production cookie/session behavior works across app routes.
+  - `JWT_SECRET` — **must be a strong random secret.** It currently falls back to a
+    hardcoded `'wingman-dev-secret'` in `lib/auth.js`; shipping without setting this
+    lets anyone forge session tokens. See `IOS_AUTH_COOKIE_RISK_AUDIT.md`.
+  - SMTP (`SMTP_*`) and Twilio (`TWILIO_*`) provider secrets
+  - Google client IDs/secret (move out of source first)
+- [ ] Point the app at production: set `EXPO_PUBLIC_API_BASE_URL=https://<your-api-domain>`
+  for the build (EAS env or `app.json` `extra`). The default `http://127.0.0.1:3000` is
+  dev-only and will be blocked by iOS ATS in a release build.
 
-## 2) Local iOS wrapper setup
+## 2) Native project config (`native/`)
 
-- [ ] Install CocoaPods (already installed on this machine).
-- [ ] Run `npm run ios:sync`.
-- [ ] Run `npm run ios:open`.
-- [ ] In Xcode, set Team and Signing under Targets -> App -> Signing & Capabilities.
-- [ ] Update Bundle Identifier from `com.wingman.app` to your final unique reverse-DNS ID.
-- [ ] Set app version/build number.
+- [ ] Set the final `version` and iOS `buildNumber` in `native/app.json`.
+- [ ] Confirm `ios.bundleIdentifier` is your final reverse-DNS ID (`com.wingman.mobile`).
+- [ ] App icon (`assets/icon.png`) and splash configured.
+- [ ] Add iOS privacy usage strings (Expo injects these into `Info.plist`). `expo-image-picker`
+  needs at least:
+  - `NSPhotoLibraryUsageDescription`
+  - `NSCameraUsageDescription` (if camera capture is used)
+  Add them via the `expo-image-picker` config plugin or `ios.infoPlist` in `app.json`.
+- [ ] Keep ATS strict (HTTPS only) — do not add arbitrary-loads exceptions for production.
 
-## 3) App capabilities and privacy
+## 3) Build the app
 
-- [ ] Add usage strings to `ios/App/App/Info.plist` for any used device features:
-  - Camera usage description
-  - Photo library usage description
-  - Microphone usage description (if needed)
-- [ ] Verify ATS/network settings are strict (HTTPS only).
-- [ ] Add push notifications capability only if implemented.
+Choose one:
 
-## 4) Authentication hardening for iOS review
+- **EAS Build (recommended, cloud):**
+  - [ ] `npm i -g eas-cli && eas login`
+  - [ ] `eas build:configure`
+  - [ ] `eas build --platform ios --profile production`
+- **Local Xcode archive:**
+  - [ ] `cd native && npx expo prebuild -p ios` (regenerates `native/ios`)
+  - [ ] `npx pod-install` (or `cd native/ios && pod install`)
+  - [ ] Open `native/ios/Wingman.xcworkspace`, set Team + Signing, then Product → Archive.
 
-- [ ] Verify Google auth works inside iOS app shell.
-- [ ] If Google web widget is unstable in WKWebView, migrate to native/system-browser OAuth flow.
-- [ ] Ensure login/logout cookies are `secure: true` in production.
-- [ ] Ensure `sameSite` choice matches your deployed domain strategy.
+## 4) Authentication review readiness
+
+- [ ] Session token persists across cold launch and background/foreground (AsyncStorage today;
+  migrating to `expo-secure-store` is recommended — see the audit).
+- [ ] On a 401 from the API, the app routes back to login rather than showing a broken screen.
+- [ ] Google Sign-In path works on device (native flow via `expo-auth-session`, not a WebView widget).
+- [ ] Phone OTP works end-to-end against the real Twilio config (or hide phone auth if not shipping it).
 
 ## 5) App Store Connect setup
 
-- [ ] Create app record in App Store Connect.
-- [ ] Fill app metadata, category, age rating, privacy policy URL, support URL.
-- [ ] Complete App Privacy nutrition labels.
+- [ ] Create the app record in App Store Connect.
+- [ ] Fill metadata, category, age rating, privacy policy URL, support URL.
+- [ ] Complete App Privacy nutrition labels (data collected: email, photos, profile data, usage).
 - [ ] Upload screenshots for required device sizes.
-- [ ] Add TestFlight internal testers and run at least one test pass.
+- [ ] Add TestFlight internal testers and run at least one full pass.
 
-## 6) Build and submit
+## 6) Submit
 
-- [ ] In Xcode: Product -> Archive.
-- [ ] Distribute App -> App Store Connect -> Upload.
-- [ ] In App Store Connect: select build, complete submission fields, and submit for review.
+- **EAS:** `eas submit --platform ios --profile production`
+- **Xcode:** Organizer → Distribute App → App Store Connect → Upload.
+- [ ] In App Store Connect: select build, complete submission fields, submit for review.
 
 ## 7) Release gates before pressing Submit
 
-- [ ] New install -> signup/login -> onboarding -> feed flow passes.
+- [ ] New install → signup → email verification → onboarding → feed flow passes.
 - [ ] Existing user login and logout pass.
-- [ ] Swipe, matches, and chat pass.
+- [ ] Delegate flow (invite/redeem), swipe-on-behalf, matches, and chat pass.
 - [ ] OTP and Google login error handling is user-friendly.
-- [ ] No broken routes when app resumes from background.
+- [ ] App resumes from background with a valid session and no broken routes.

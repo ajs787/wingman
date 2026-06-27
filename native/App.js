@@ -45,6 +45,7 @@ import {
   IconButton,
   Pill,
   Screen,
+  Sparkle,
   TextField,
 } from './src/components/ui';
 import { fontAssets, fonts } from './src/fonts';
@@ -111,104 +112,106 @@ function LoadingScreen() {
 }
 
 function IntroScreen({ onDone }) {
-  const introLogoSize = 86;
+  const introLogoSize = 96;
   const containerOpacity = useRef(new Animated.Value(1)).current;
   const backdropOpacity = useRef(new Animated.Value(1)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
-  const logoScale = useRef(new Animated.Value(0.82)).current;
-  const logoLift = useRef(new Animated.Value(12)).current;
+  const logoScale = useRef(new Animated.Value(0.5)).current;
   const introLift = useRef(new Animated.Value(0)).current;
   const introScale = useRef(new Animated.Value(1)).current;
+  const ringScale = useRef(new Animated.Value(0.4)).current;
+  const ringOpacity = useRef(new Animated.Value(0)).current;
   const titleOpacity = useRef(new Animated.Value(0)).current;
-  const titleLift = useRef(new Animated.Value(10)).current;
+  const titleLift = useRef(new Animated.Value(14)).current;
+  const tagOpacity = useRef(new Animated.Value(0)).current;
+  const idleBob = useRef(new Animated.Value(0)).current;
+  const dotsOpacity = useRef(new Animated.Value(0)).current;
+  const spark1 = useRef(new Animated.Value(0)).current;
+  const spark2 = useRef(new Animated.Value(0)).current;
+  const spark3 = useRef(new Animated.Value(0)).current;
+  const dot1 = useRef(new Animated.Value(0.4)).current;
+  const dot2 = useRef(new Animated.Value(0.4)).current;
+  const dot3 = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
-    const animation = Animated.sequence([
+    const sparkPop = (value, delay) =>
+      Animated.sequence([
+        Animated.delay(delay),
+        Animated.timing(value, { toValue: 1, duration: 170, easing: Easing.out(Easing.back(2)), useNativeDriver: true }),
+        Animated.timing(value, { toValue: 0, duration: 260, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+      ]);
+
+    const dotPulse = (value, delay) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(value, { toValue: 1, duration: 440, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+          Animated.timing(value, { toValue: 0.4, duration: 440, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        ])
+      );
+
+    const bob = Animated.loop(
+      Animated.sequence([
+        Animated.timing(idleBob, { toValue: -7, duration: 950, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(idleBob, { toValue: 0, duration: 950, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ])
+    );
+
+    const main = Animated.sequence([
+      // 1. spring in + ring pulse + sizzle sparks
       Animated.parallel([
-        Animated.timing(logoOpacity, {
-          toValue: 1,
-          duration: 520,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.spring(logoScale, {
-          toValue: 1,
-          friction: 8,
-          tension: 58,
-          useNativeDriver: true,
-        }),
-        Animated.timing(logoLift, {
-          toValue: 0,
-          duration: 720,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
+        Animated.timing(logoOpacity, { toValue: 1, duration: 240, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.spring(logoScale, { toValue: 1, friction: 5, tension: 80, useNativeDriver: true }),
+        Animated.sequence([
+          Animated.timing(ringOpacity, { toValue: 0.55, duration: 100, useNativeDriver: true }),
+          Animated.parallel([
+            Animated.timing(ringScale, { toValue: 1.55, duration: 640, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+            Animated.timing(ringOpacity, { toValue: 0, duration: 640, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+          ]),
+        ]),
+        sparkPop(spark1, 200),
+        sparkPop(spark2, 320),
+        sparkPop(spark3, 430),
       ]),
+      // 2. wordmark + tagline rise, loading dots appear
       Animated.parallel([
-        Animated.timing(titleOpacity, {
-          toValue: 1,
-          duration: 620,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(titleLift, {
-          toValue: 0,
-          duration: 620,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
+        Animated.timing(titleOpacity, { toValue: 1, duration: 440, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(titleLift, { toValue: 0, duration: 480, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.sequence([
+          Animated.delay(160),
+          Animated.timing(tagOpacity, { toValue: 1, duration: 440, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        ]),
+        Animated.timing(dotsOpacity, { toValue: 1, duration: 420, useNativeDriver: true }),
       ]),
-      Animated.delay(620),
+      // 3. idle hold (bob + dots pulse)
+      Animated.delay(680),
+      // 4. hand off to the app
       Animated.parallel([
-        Animated.timing(titleOpacity, {
-          toValue: 0,
-          duration: 520,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(titleLift, {
-          toValue: -14,
-          duration: 520,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(containerOpacity, {
-          toValue: 0,
-          duration: 700,
-          easing: Easing.inOut(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(introLift, {
-          toValue: -42,
-          duration: 780,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(introScale, {
-          toValue: 0.94,
-          duration: 780,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(backdropOpacity, {
-          toValue: 0,
-          duration: 820,
-          easing: Easing.inOut(Easing.cubic),
-          useNativeDriver: true,
-        }),
+        Animated.timing(containerOpacity, { toValue: 0, duration: 540, easing: Easing.inOut(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(introLift, { toValue: -40, duration: 640, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(introScale, { toValue: 0.94, duration: 640, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(backdropOpacity, { toValue: 0, duration: 700, easing: Easing.inOut(Easing.cubic), useNativeDriver: true }),
       ]),
     ]);
 
-    animation.start(({ finished }) => {
+    bob.start();
+    const dotLoops = [dotPulse(dot1, 0), dotPulse(dot2, 150), dotPulse(dot3, 300)];
+    dotLoops.forEach((loop) => loop.start());
+    main.start(({ finished }) => {
       if (finished) onDone();
     });
 
-    return () => animation.stop();
-  }, [backdropOpacity, containerOpacity, introLift, introScale, logoLift, logoOpacity, logoScale, onDone, titleLift, titleOpacity]);
+    return () => {
+      main.stop();
+      bob.stop();
+      dotLoops.forEach((loop) => loop.stop());
+    };
+  }, [onDone]);
 
   return (
     <View pointerEvents="none" style={styles.introOverlay}>
       <Animated.View style={[styles.introBackdrop, { opacity: backdropOpacity }]} />
+      <Animated.View style={[styles.introGlow, { opacity: backdropOpacity }]} />
       <Animated.View
         style={[
           styles.introRoot,
@@ -218,31 +221,62 @@ function IntroScreen({ onDone }) {
           },
         ]}
       >
-        <Animated.View
-          style={[
-            styles.introLogo,
-            {
-              opacity: logoOpacity,
-              transform: [
-                { scale: logoScale },
-                { translateY: logoLift },
-              ],
-            },
-          ]}
-        >
-          <BrandMark size={introLogoSize} iconSize={48} />
-        </Animated.View>
+        <View style={styles.introLogoWrap}>
+          <Animated.View
+            style={[styles.introRing, { opacity: ringOpacity, transform: [{ scale: ringScale }] }]}
+          />
+          <Animated.View
+            style={[
+              styles.introSpark,
+              styles.introSpark1,
+              { opacity: spark1, transform: [{ scale: spark1.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1.1] }) }] },
+            ]}
+          >
+            <Sparkle size={22} color="#ffffff" />
+          </Animated.View>
+          <Animated.View
+            style={[
+              styles.introSpark,
+              styles.introSpark2,
+              { opacity: spark2, transform: [{ scale: spark2.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1.1] }) }] },
+            ]}
+          >
+            <Sparkle size={14} color="#ffe2ec" />
+          </Animated.View>
+          <Animated.View
+            style={[
+              styles.introSpark,
+              styles.introSpark3,
+              { opacity: spark3, transform: [{ scale: spark3.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1.1] }) }] },
+            ]}
+          >
+            <Sparkle size={12} color="#ffffff" />
+          </Animated.View>
+          <Animated.View
+            style={[
+              styles.introLogo,
+              { opacity: logoOpacity, transform: [{ scale: logoScale }, { translateY: idleBob }] },
+            ]}
+          >
+            <BrandMark size={introLogoSize} />
+          </Animated.View>
+        </View>
         <Animated.Text
           style={[
             styles.introTitle,
-            {
-              opacity: titleOpacity,
-              transform: [{ translateY: titleLift }],
-            },
+            { opacity: titleOpacity, transform: [{ translateY: titleLift }] },
           ]}
         >
-          wingman
+          wing<Text style={styles.introTitleAccent}>man</Text>
         </Animated.Text>
+        <Animated.Text style={[styles.introTagline, { opacity: tagOpacity }]}>
+          you're the matchmaker
+        </Animated.Text>
+      </Animated.View>
+      <Animated.View style={[styles.introDots, { opacity: dotsOpacity }]}>
+        <Animated.View style={[styles.introDot, { opacity: dot1 }]} />
+        <Animated.View style={[styles.introDot, { opacity: dot2 }]} />
+        <Animated.View style={[styles.introDot, { opacity: dot3 }]} />
       </Animated.View>
     </View>
   );
@@ -339,12 +373,8 @@ function AuthScreen({ onAuthed }) {
       <Screen>
         <View style={styles.authScreenBody}>
           <View style={styles.authHero}>
-            <View style={styles.authWordmark}>
-              <Text style={styles.appName}>wingman</Text>
-              <View style={styles.perchedBird}>
-                <BrandMark size={38} iconSize={31} />
-              </View>
-            </View>
+            <BrandMark size={66} />
+            <Text style={[styles.appName, styles.appNameStacked]}>wing<Text style={styles.appNameAccent}>man</Text></Text>
             <Text style={styles.brandTagline}>verify your school email</Text>
           </View>
 
@@ -394,13 +424,9 @@ function AuthScreen({ onAuthed }) {
     <Screen>
       <View style={styles.authScreenBody}>
         <View style={styles.authHero}>
-          <View style={styles.authWordmark}>
-            <Text style={styles.appName}>wingman</Text>
-            <View style={styles.perchedBird}>
-              <BrandMark size={38} iconSize={31} />
-            </View>
-          </View>
-          <Text style={styles.brandTagline}>friends swipe for you</Text>
+          <BrandMark size={72} />
+          <Text style={[styles.appName, styles.appNameStacked]}>wing<Text style={styles.appNameAccent}>man</Text></Text>
+          <Text style={styles.brandTagline}>you're the matchmaker</Text>
         </View>
 
         <Card style={styles.authCard}>
@@ -1402,7 +1428,7 @@ function HomeScreen({ profile, onSelectOwner, onRoute, onSignOut, setPendingMatc
             <Text style={styles.rowTitle}>{owner.name}</Text>
             <Text style={styles.mutedText}>{owner.school || owner.year || 'Friend'} · {owner.majors?.join(', ') || owner.major || 'Profile'}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
+          <Ionicons name="chevron-forward" size={20} color={colors.muted} />
         </Pressable>
       ))}
 
@@ -2416,25 +2442,82 @@ const styles = StyleSheet.create({
   },
   introBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.background,
+    backgroundColor: colors.charcoal,
+  },
+  introGlow: {
+    position: 'absolute',
+    top: '22%',
+    left: '50%',
+    marginLeft: -160,
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    backgroundColor: 'rgba(245,106,156,0.12)',
   },
   introRoot: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  introLogoWrap: {
+    width: 160,
+    height: 160,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  introRing: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.85)',
+  },
+  introSpark: {
+    position: 'absolute',
+  },
+  introSpark1: { top: 2, right: 16 },
+  introSpark2: { bottom: 14, left: 6 },
+  introSpark3: { top: 30, left: 22 },
   introLogo: {
-    shadowColor: colors.orange,
-    shadowOpacity: 0.18,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 14 },
-    elevation: 6,
+    shadowColor: colors.pink,
+    shadowOpacity: 0.5,
+    shadowRadius: 26,
+    shadowOffset: { width: 0, height: 16 },
+    elevation: 8,
   },
   introTitle: {
-    marginTop: 18,
-    color: colors.text,
-    fontSize: 38,
+    marginTop: 16,
+    color: '#ffffff',
+    fontSize: 40,
+    letterSpacing: -1.4,
     fontFamily: fonts.displayExtraBold,
+  },
+  introTitleAccent: {
+    color: colors.pinkLight,
+  },
+  introTagline: {
+    marginTop: 12,
+    color: '#c8bcae',
+    fontSize: 10,
+    letterSpacing: 3,
+    textTransform: 'uppercase',
+    fontFamily: fonts.mono,
+  },
+  introDots: {
+    position: 'absolute',
+    bottom: 96,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  introDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ffffff',
   },
   centered: {
     flex: 1,
@@ -2450,29 +2533,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 42,
   },
-  authWordmark: {
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 12,
-    paddingHorizontal: 8,
-  },
-  perchedBird: {
-    position: 'absolute',
-    top: -4,
-    right: 12,
-  },
   appName: {
     color: colors.text,
     fontSize: 44,
     lineHeight: 50,
+    letterSpacing: -1.4,
     fontFamily: fonts.displayExtraBold,
   },
+  appNameAccent: {
+    color: colors.pink,
+  },
+  appNameStacked: {
+    marginTop: 16,
+  },
   brandTagline: {
-    marginTop: 0,
+    marginTop: 12,
     color: colors.muted,
-    fontSize: 14,
-    fontFamily: fonts.bodySemiBold,
+    fontSize: 11,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    fontFamily: fonts.mono,
   },
   heroTitle: {
     marginTop: 16,
@@ -2589,7 +2669,7 @@ const styles = StyleSheet.create({
     width: 18,
     height: 5,
     borderRadius: 999,
-    backgroundColor: '#ffd0c7',
+    backgroundColor: colors.secondaryPressed,
   },
   stepDotActive: {
     backgroundColor: colors.black,
@@ -2828,7 +2908,7 @@ const styles = StyleSheet.create({
   },
   photoSlotDragging: {
     opacity: 0.92,
-    shadowColor: '#2e1065',
+    shadowColor: '#5A3A2A',
     shadowOpacity: 0.35,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 10 },
@@ -3123,7 +3203,7 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 3 / 4,
     borderRadius: 22,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: colors.surfaceWarm,
   },
   modalBackdrop: {
     flex: 1,
