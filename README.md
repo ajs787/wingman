@@ -136,10 +136,6 @@ This creates demo profiles and active delegations so you can test swiping immedi
 - `npm run native:ios:tunnel` — start iOS through an Expo tunnel
 - `npm run native:android` — start the Expo app on Android emulator
 - `npm run native:android:lan` — start Android using the local network address
-- `npm run ios:add` — add iOS platform files via Capacitor
-- `npm run ios:sync` — sync Capacitor config/assets into iOS project
-- `npm run ios:open` — open iOS Xcode workspace
-- `npm run ios:refresh` — sync and open iOS project
 
 ## React Native App
 
@@ -230,24 +226,25 @@ Feed/swipes/matches:
 - Set `MONGODB_URI`, `JWT_SECRET`, SMTP, and Twilio variables in the deployment environment
 - Ensure cookie/domain behavior matches your production URL
 
-## iOS Wrapper + App Store
+## iOS + App Store
 
-This repository is configured for a Capacitor iOS wrapper that loads your hosted web app URL.
+iOS runs as a native **React Native** app (Expo) in `native/` — not a Capacitor/WebView wrapper. The screens are real React Native components that call the Next.js API.
 
-1. Set your production app URL before syncing iOS:
-
-```bash
-export CAPACITOR_SERVER_URL="https://your-production-domain.example"
-```
-
-2. Sync and open the iOS project:
+1. Develop on the simulator:
 
 ```bash
-npm run ios:sync
-npm run ios:open
+npm run dev          # backend on http://127.0.0.1:3000
+npm run native:ios   # Expo Go on the iOS Simulator
 ```
 
-3. In Xcode, configure signing, bundle identifier, app version/build, and archive for App Store Connect upload.
+2. For a standalone build / App Store archive, build the native iOS project (Expo prebuild) under `native/ios`:
+
+```bash
+cd native
+npx expo run:ios --configuration Release   # or open native/ios in Xcode
+```
+
+3. In Xcode, configure signing, bundle identifier (`com.wingman.mobile`), app version/build, and archive for App Store Connect upload. For managed cloud builds, EAS Build is an alternative.
 
 Additional guides in this repo:
 
