@@ -33,7 +33,7 @@
       "expo-font"
     ],
     "extra": {
-      "apiBaseUrl": ""
+      "apiBaseUrl": "https://www.wingman33.com"
     }
   }
 }
