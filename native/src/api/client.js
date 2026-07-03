@@ -35,7 +35,13 @@ function normalizeBaseUrl(url) {
   return String(url || '').replace(/\/+$/, '');
 }
 
-export const API_BASE_URL = normalizeBaseUrl(process.env.EXPO_PUBLIC_API_BASE_URL || getDefaultBaseUrl());
+// Precedence: build-time env var -> app.json `extra.apiBaseUrl` (the deployed
+// backend, baked into every build) -> local dev default.
+export const API_BASE_URL = normalizeBaseUrl(
+  process.env.EXPO_PUBLIC_API_BASE_URL ||
+    Constants.expoConfig?.extra?.apiBaseUrl ||
+    getDefaultBaseUrl()
+);
 
 export function getApiDebugInfo() {
   return {
