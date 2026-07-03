@@ -8,8 +8,14 @@ import { signToken } from '@/lib/auth';
 import { setSessionCookie } from '@/lib/auth-cookies';
 import { phoneOTPSchema } from '@/lib/validations';
 import { isOTPValid, normalizeUSPhone, PHONE_OTP_TTL_MS } from '@/lib/phone-otp';
+import { rateLimit, clientIp } from '@/lib/rate-limit';
 
 export async function POST(request) {
+  const rl = rateLimit(`otp-verify:${clientIp(request)}`, { limit: 8, windowMs: 60_000 });
+  if (!rl.ok) {
+    return NextResponse.json({ error: 'Too many attempts. Please wait a minute and try again.' }, { status: 429 });
+  }
+
   let body;
   try { body = await request.json(); } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });

@@ -9,7 +9,8 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Bird, Phone, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { Phone, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { BrandMark, Wordmark } from '@/components/brand';
 
 function AuthForm() {
   const router = useRouter();
@@ -306,9 +307,11 @@ function AuthForm() {
         <div className="w-full max-w-sm">
 
           {/* Logo - clickable */}
-          <Link href="/" className="flex justify-center mb-8">
-            <div className="w-12 h-12 rounded-2xl bg-black flex items-center justify-center shadow-lg shadow-gray-400 hover:bg-gray-800 transition-colors">
-              <Bird className="w-6 h-6 text-white" />
+          <Link href="/" className="mb-8 flex flex-col items-center gap-3 transition-transform hover:-translate-y-0.5">
+            <BrandMark size={64} />
+            <div className="text-center">
+              <Wordmark className="text-3xl" />
+              <p className="eyebrow mt-2">you&rsquo;re the matchmaker</p>
             </div>
           </Link>
 

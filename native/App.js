@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Dimensions,
   Easing,
   FlatList,
   Image,
@@ -20,6 +21,8 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import * as ImagePicker from 'expo-image-picker';
+import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
 import {
@@ -49,7 +52,7 @@ import {
   TextField,
 } from './src/components/ui';
 import { fontAssets, fonts } from './src/fonts';
-import { colors } from './src/theme';
+import { colors, gradients, shadow } from './src/theme';
 import {
   CLASS_YEARS,
   GENDERS,
@@ -1492,6 +1495,7 @@ function SwipeScreen({ owner, onBack }) {
   const [swiping, setSwiping] = useState(false);
   const [error, setError] = useState('');
   const [noteOpen, setNoteOpen] = useState(false);
+  const [matchInfo, setMatchInfo] = useState(null);
 
   const candidate = candidates[index];
 
@@ -1526,35 +1530,35 @@ function SwipeScreen({ owner, onBack }) {
     loadLiked(true);
   }, [owner?._id]);
 
-  async function swipe(direction, friendNote = null) {
-    if (!candidate) return;
-    setSwiping(true);
+  // Optimistic: advance the deck instantly for a snappy feel, persist in the background.
+  function swipe(direction, friendNote = null) {
+    const target = candidates[index];
+    if (!target) return;
     setError('');
-    try {
-      const data = await apiRequest('/api/swipe', {
-        method: 'POST',
-        body: {
-          owner_user_id: owner._id,
-          target_user_id: candidate._id,
-          direction,
-          friend_note: friendNote,
-        },
+    setIndex((current) => current + 1);
+    apiRequest('/api/swipe', {
+      method: 'POST',
+      body: {
+        owner_user_id: owner._id,
+        target_user_id: target._id,
+        direction,
+        friend_note: friendNote,
+      },
+    })
+      .then((data) => {
+        if (data.matched) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+          setMatchInfo({ candidate: target });
+        }
+        if (direction === 'right') loadLiked(true);
+      })
+      .catch((err) => {
+        if (err.data?.code === 'LIKE_LIMIT_REACHED') {
+          setError('Daily like limit reached for this friend.');
+        } else {
+          setError(err.message);
+        }
       });
-      if (data.matched) {
-        Alert.alert('Match created', `${owner.name} has a new match to review.`);
-      }
-      if (direction === 'right') loadLiked(true);
-      setIndex((current) => current + 1);
-    } catch (err) {
-      if (err.data?.code === 'LIKE_LIMIT_REACHED') {
-        setError('Daily like limit reached for this friend.');
-      } else {
-        setError(err.message);
-      }
-    } finally {
-      setSwiping(false);
-      setNoteOpen(false);
-    }
   }
 
   return (
@@ -1617,35 +1621,14 @@ function SwipeScreen({ owner, onBack }) {
             body="You have reached the end of this feed for now."
           />
         ) : (
-          <>
-            <ScrollView style={styles.candidateScroll} showsVerticalScrollIndicator={false}>
-              <CandidateCard candidate={candidate} />
-            </ScrollView>
-            <View style={styles.swipeActions}>
-              <Button
-                variant="secondary"
-                style={styles.swipeButton}
-                disabled={swiping}
-                onPress={() => swipe('left')}
-              >
-                Pass
-              </Button>
-              <Button
-                style={styles.swipeButton}
-                disabled={swiping}
-                onPress={() => setNoteOpen(true)}
-              >
-                Like
-              </Button>
-            </View>
-            <NoteModal
-              visible={noteOpen}
-              candidate={candidate}
-              onCancel={() => swipe('right', null)}
-              onSubmit={(note) => swipe('right', note)}
-            />
-          </>
+          <SwipeDeck candidates={candidates} index={index} onCommit={swipe} />
         )}
+        <MatchCelebration
+          visible={!!matchInfo}
+          owner={owner}
+          candidate={matchInfo?.candidate}
+          onClose={() => setMatchInfo(null)}
+        />
       </View>
     </Screen>
   );
@@ -1681,6 +1664,234 @@ function CandidateCard({ candidate }) {
 
       <ProfileAlternatingSections prompts={candidate.prompts || []} photos={photos} />
     </View>
+  );
+}
+
+const SCREEN_W = Dimensions.get('window').width;
+const SWIPE_THRESHOLD = SCREEN_W * 0.26;
+
+function DeckCardFace({ candidate }) {
+  const photo = imageUrl(candidate.photos?.[0]);
+  const comp = candidate.ranking?.compatibility;
+  const reasons = (candidate.ranking?.explainability?.reasons || []).slice(0, 3);
+  const meta = [candidate.school, candidate.majors?.join(', ') || candidate.major, candidate.year]
+    .filter(Boolean)
+    .join('  ·  ');
+  return (
+    <View style={styles.cardFace}>
+      {photo ? (
+        <Image source={{ uri: photo }} style={styles.cardPhoto} />
+      ) : (
+        <LinearGradient colors={gradients.pink} start={gradients.pinkStart} end={gradients.pinkEnd} style={[styles.cardPhoto, styles.cardPhotoEmpty]}>
+          <Text style={styles.cardInitial}>{candidate.name?.[0]?.toUpperCase() || '?'}</Text>
+        </LinearGradient>
+      )}
+      {typeof comp === 'number' ? (
+        <View style={styles.compBadge}>
+          <Text style={styles.compBadgeText}>✨ {comp}% match</Text>
+        </View>
+      ) : null}
+      <LinearGradient colors={['rgba(20,12,10,0)', 'rgba(20,12,10,0.92)']} style={styles.cardScrim} pointerEvents="none" />
+      <View style={styles.cardInfo} pointerEvents="none">
+        <Text style={styles.cardName}>
+          {candidate.name || 'Someone'}{candidate.age ? `, ${candidate.age}` : ''}
+        </Text>
+        {meta ? <Text style={styles.cardMeta}>{meta}</Text> : null}
+        {reasons.length ? (
+          <View style={styles.reasonRow}>
+            {reasons.map((reason, i) => (
+              <View key={i} style={styles.reasonChip}>
+                <Text style={styles.reasonChipText}>{reason}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+function SwipeDeck({ candidates, index, onCommit }) {
+  const pan = useRef(new Animated.ValueXY()).current;
+  const crossed = useRef(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  const current = candidates[index];
+  const next = candidates[index + 1];
+
+  const rotate = pan.x.interpolate({ inputRange: [-SCREEN_W / 2, 0, SCREEN_W / 2], outputRange: ['-10deg', '0deg', '10deg'], extrapolate: 'clamp' });
+  const likeOpacity = pan.x.interpolate({ inputRange: [14, SWIPE_THRESHOLD], outputRange: [0, 1], extrapolate: 'clamp' });
+  const nopeOpacity = pan.x.interpolate({ inputRange: [-SWIPE_THRESHOLD, -14], outputRange: [1, 0], extrapolate: 'clamp' });
+  const nextScale = pan.x.interpolate({ inputRange: [-SCREEN_W / 2, 0, SCREEN_W / 2], outputRange: [1, 0.93, 1], extrapolate: 'clamp' });
+  const nextOpacity = pan.x.interpolate({ inputRange: [-SCREEN_W / 2, 0, SCREEN_W / 2], outputRange: [1, 0.5, 1], extrapolate: 'clamp' });
+
+  const forceSwipe = (direction, note = null) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    const toX = direction === 'right' ? SCREEN_W * 1.35 : -SCREEN_W * 1.35;
+    Animated.timing(pan, { toValue: { x: toX, y: 0 }, duration: 230, easing: Easing.out(Easing.quad), useNativeDriver: true }).start(() => {
+      pan.setValue({ x: 0, y: 0 });
+      crossed.current = false;
+      onCommit(direction, note);
+    });
+  };
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (e, g) => Math.abs(g.dx) > 6 && Math.abs(g.dx) > Math.abs(g.dy) * 1.2,
+        onPanResponderMove: (e, g) => {
+          pan.setValue({ x: g.dx, y: g.dy * 0.18 });
+          const past = Math.abs(g.dx) > SWIPE_THRESHOLD;
+          if (past && !crossed.current) {
+            crossed.current = true;
+            Haptics.selectionAsync().catch(() => {});
+          } else if (!past && crossed.current) {
+            crossed.current = false;
+          }
+        },
+        onPanResponderRelease: (e, g) => {
+          if (Math.abs(g.dx) < 6 && Math.abs(g.dy) < 6) {
+            setDetailOpen(true);
+            return;
+          }
+          if (g.dx > SWIPE_THRESHOLD || g.vx > 0.7) forceSwipe('right');
+          else if (g.dx < -SWIPE_THRESHOLD || g.vx < -0.7) forceSwipe('left');
+          else {
+            crossed.current = false;
+            Animated.spring(pan, { toValue: { x: 0, y: 0 }, friction: 6, tension: 70, useNativeDriver: true }).start();
+          }
+        },
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [index, candidates]
+  );
+
+  if (!current) return null;
+
+  return (
+    <View style={styles.deckWrap}>
+      <View style={styles.deckArea}>
+        {next ? (
+          <Animated.View style={[styles.deckCard, { transform: [{ scale: nextScale }], opacity: nextOpacity }]} pointerEvents="none">
+            <DeckCardFace candidate={next} />
+          </Animated.View>
+        ) : null}
+        <Animated.View
+          style={[styles.deckCard, { transform: [{ translateX: pan.x }, { translateY: pan.y }, { rotate }] }]}
+          {...panResponder.panHandlers}
+        >
+          <DeckCardFace candidate={current} />
+          <Animated.View style={[styles.stamp, styles.stampLike, { opacity: likeOpacity }]} pointerEvents="none">
+            <Text style={styles.stampTextLike}>LIKE</Text>
+          </Animated.View>
+          <Animated.View style={[styles.stamp, styles.stampNope, { opacity: nopeOpacity }]} pointerEvents="none">
+            <Text style={styles.stampTextNope}>NOPE</Text>
+          </Animated.View>
+        </Animated.View>
+      </View>
+
+      <View style={styles.deckActions}>
+        <Pressable onPress={() => forceSwipe('left')} style={({ pressed }) => [styles.circleBtn, styles.circleBtnPass, pressed && styles.circleBtnPressed]}>
+          <Ionicons name="close" size={32} color={colors.red} />
+        </Pressable>
+        <Pressable onPress={() => setDetailOpen(true)} style={({ pressed }) => [styles.circleBtnSmall, pressed && styles.circleBtnPressed]}>
+          <Ionicons name="information-outline" size={20} color={colors.muted} />
+        </Pressable>
+        <Pressable onPress={() => setNoteOpen(true)} style={({ pressed }) => [styles.circleBtn, styles.circleBtnLike, pressed && styles.circleBtnPressed]}>
+          <Ionicons name="heart" size={28} color="#fff" />
+        </Pressable>
+      </View>
+
+      <NoteModal
+        visible={noteOpen}
+        candidate={current}
+        onCancel={() => { setNoteOpen(false); forceSwipe('right', null); }}
+        onSubmit={(note) => { setNoteOpen(false); forceSwipe('right', note); }}
+      />
+
+      <Modal visible={detailOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setDetailOpen(false)}>
+        <Screen>
+          <View style={styles.detailHeader}>
+            <Text style={styles.detailHeaderTitle}>{current.name || 'Profile'}</Text>
+            <IconButton icon="close" label="Close" onPress={() => setDetailOpen(false)} />
+          </View>
+          <CandidateCard candidate={current} />
+        </Screen>
+      </Modal>
+    </View>
+  );
+}
+
+function MatchCelebration({ visible, owner, candidate, onClose }) {
+  const fade = useRef(new Animated.Value(0)).current;
+  const pop = useRef(new Animated.Value(0.6)).current;
+  const leftX = useRef(new Animated.Value(-70)).current;
+  const rightX = useRef(new Animated.Value(70)).current;
+  const heart = useRef(new Animated.Value(0)).current;
+  const sparks = useRef([new Animated.Value(0), new Animated.Value(0), new Animated.Value(0), new Animated.Value(0)]).current;
+
+  useEffect(() => {
+    if (!visible) return;
+    fade.setValue(0);
+    pop.setValue(0.6);
+    leftX.setValue(-70);
+    rightX.setValue(70);
+    heart.setValue(0);
+    sparks.forEach((s) => s.setValue(0));
+    Animated.parallel([
+      Animated.timing(fade, { toValue: 1, duration: 220, useNativeDriver: true }),
+      Animated.spring(pop, { toValue: 1, friction: 6, tension: 70, useNativeDriver: true }),
+      Animated.spring(leftX, { toValue: 0, friction: 7, tension: 55, useNativeDriver: true }),
+      Animated.spring(rightX, { toValue: 0, friction: 7, tension: 55, useNativeDriver: true }),
+      Animated.sequence([Animated.delay(260), Animated.spring(heart, { toValue: 1, friction: 4, tension: 90, useNativeDriver: true })]),
+      ...sparks.map((s, i) =>
+        Animated.sequence([Animated.delay(320 + i * 120), Animated.spring(s, { toValue: 1, friction: 4, tension: 80, useNativeDriver: true })])
+      ),
+    ]).start();
+  }, [visible]);
+
+  if (!visible || !candidate) return null;
+
+  const sparkStyle = (v) => ({ opacity: v, transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.2, 1] }) }] });
+  const ownerName = owner?.name?.split(' ')[0] || 'your friend';
+  const candName = candidate?.name?.split(' ')[0] || 'someone';
+
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <Animated.View style={[styles.matchOverlay, { opacity: fade }]}>
+        <LinearGradient colors={['#2a0f1d', '#e0447f', '#2a0f1d']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+        <View style={styles.matchGlow} pointerEvents="none" />
+
+        <Animated.View style={[styles.matchSpark, { top: '20%', left: '15%' }, sparkStyle(sparks[0])]} pointerEvents="none"><Sparkle size={30} color="#ffffff" /></Animated.View>
+        <Animated.View style={[styles.matchSpark, { top: '25%', right: '13%' }, sparkStyle(sparks[1])]} pointerEvents="none"><Sparkle size={20} color="#ffe2ec" /></Animated.View>
+        <Animated.View style={[styles.matchSpark, { bottom: '30%', left: '19%' }, sparkStyle(sparks[2])]} pointerEvents="none"><Sparkle size={18} color="#ffe2ec" /></Animated.View>
+        <Animated.View style={[styles.matchSpark, { bottom: '34%', right: '17%' }, sparkStyle(sparks[3])]} pointerEvents="none"><Sparkle size={26} color="#ffffff" /></Animated.View>
+
+        <Text style={styles.matchEyebrow}>you’re the matchmaker</Text>
+        <Animated.Text style={[styles.matchTitle, { transform: [{ scale: pop }] }]}>It’s a match!</Animated.Text>
+
+        <View style={styles.matchAvatars}>
+          <Animated.View style={[styles.matchAvatarRing, { transform: [{ translateX: leftX }] }]}>
+            <Avatar uri={imageUrl(owner?.photos?.[0])} name={owner?.name} size={104} />
+          </Animated.View>
+          <Animated.View style={[styles.matchHeart, { transform: [{ scale: heart }] }]} pointerEvents="none">
+            <Ionicons name="heart" size={28} color={colors.pink} />
+          </Animated.View>
+          <Animated.View style={[styles.matchAvatarRing, styles.matchAvatarRingRight, { transform: [{ translateX: rightX }] }]}>
+            <Avatar uri={imageUrl(candidate?.photos?.[0])} name={candidate?.name} size={104} />
+          </Animated.View>
+        </View>
+
+        <Text style={styles.matchSub}>
+          You matched {ownerName} with {candName} — it’s in their matches to review.
+        </Text>
+
+        <Pressable onPress={onClose} style={({ pressed }) => [styles.matchButton, pressed && styles.circleBtnPressed]}>
+          <Text style={styles.matchButtonText}>Keep swiping</Text>
+        </Pressable>
+      </Animated.View>
+    </Modal>
   );
 }
 
@@ -3091,6 +3302,251 @@ const styles = StyleSheet.create({
   },
   swipeButton: {
     flex: 1,
+  },
+  deckWrap: {
+    flex: 1,
+    paddingTop: 6,
+  },
+  deckArea: {
+    flex: 1,
+    marginBottom: 16,
+  },
+  deckCard: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 28,
+    overflow: 'hidden',
+    backgroundColor: colors.surface,
+    ...shadow,
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+  },
+  cardFace: {
+    flex: 1,
+  },
+  cardPhoto: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+  },
+  cardPhotoEmpty: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardInitial: {
+    color: '#fff',
+    fontSize: 104,
+    fontFamily: fonts.displayExtraBold,
+  },
+  cardScrim: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '58%',
+  },
+  cardInfo: {
+    position: 'absolute',
+    left: 22,
+    right: 22,
+    bottom: 24,
+  },
+  cardName: {
+    color: '#fff',
+    fontSize: 30,
+    letterSpacing: -0.6,
+    fontFamily: fonts.displayExtraBold,
+  },
+  cardMeta: {
+    color: 'rgba(255,255,255,0.92)',
+    fontSize: 14,
+    marginTop: 4,
+    fontFamily: fonts.bodyMedium,
+  },
+  reasonRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 14,
+  },
+  reasonChip: {
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderRadius: 999,
+    paddingVertical: 5,
+    paddingHorizontal: 11,
+  },
+  reasonChipText: {
+    color: '#fff',
+    fontSize: 11,
+    fontFamily: fonts.bodySemiBold,
+    textTransform: 'capitalize',
+  },
+  compBadge: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    backgroundColor: 'rgba(20,12,10,0.5)',
+    borderRadius: 999,
+    paddingVertical: 7,
+    paddingHorizontal: 13,
+  },
+  compBadgeText: {
+    color: '#fff',
+    fontSize: 13,
+    fontFamily: fonts.bodyExtraBold,
+  },
+  stamp: {
+    position: 'absolute',
+    top: 44,
+    paddingVertical: 6,
+    paddingHorizontal: 18,
+    borderRadius: 12,
+    borderWidth: 4,
+  },
+  stampLike: {
+    left: 24,
+    borderColor: colors.green,
+    transform: [{ rotate: '-16deg' }],
+  },
+  stampNope: {
+    right: 24,
+    borderColor: colors.red,
+    transform: [{ rotate: '16deg' }],
+  },
+  stampTextLike: {
+    color: colors.green,
+    fontSize: 34,
+    letterSpacing: 1.5,
+    fontFamily: fonts.displayExtraBold,
+  },
+  stampTextNope: {
+    color: colors.red,
+    fontSize: 34,
+    letterSpacing: 1.5,
+    fontFamily: fonts.displayExtraBold,
+  },
+  deckActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 24,
+    paddingBottom: 6,
+  },
+  circleBtn: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow,
+  },
+  circleBtnPass: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  circleBtnLike: {
+    backgroundColor: colors.pink,
+  },
+  circleBtnSmall: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  circleBtnPressed: {
+    transform: [{ scale: 0.92 }],
+  },
+  detailHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  detailHeaderTitle: {
+    fontSize: 24,
+    color: colors.text,
+    fontFamily: fonts.displayExtraBold,
+  },
+  matchOverlay: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+  matchGlow: {
+    position: 'absolute',
+    top: '24%',
+    width: 360,
+    height: 360,
+    borderRadius: 180,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  matchSpark: {
+    position: 'absolute',
+  },
+  matchEyebrow: {
+    color: 'rgba(255,255,255,0.88)',
+    fontSize: 11,
+    letterSpacing: 3,
+    textTransform: 'uppercase',
+    fontFamily: fonts.mono,
+    marginBottom: 12,
+  },
+  matchTitle: {
+    color: '#ffffff',
+    fontSize: 48,
+    letterSpacing: -1.2,
+    fontFamily: fonts.displayExtraBold,
+  },
+  matchAvatars: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 30,
+    marginBottom: 26,
+  },
+  matchAvatarRing: {
+    borderRadius: 60,
+    borderWidth: 4,
+    borderColor: 'rgba(255,255,255,0.92)',
+    overflow: 'hidden',
+  },
+  matchAvatarRingRight: {},
+  matchHeart: {
+    marginHorizontal: -16,
+    zIndex: 5,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow,
+  },
+  matchSub: {
+    color: 'rgba(255,255,255,0.92)',
+    fontSize: 15,
+    textAlign: 'center',
+    lineHeight: 22,
+    fontFamily: fonts.bodyMedium,
+    marginBottom: 30,
+    paddingHorizontal: 8,
+  },
+  matchButton: {
+    backgroundColor: '#ffffff',
+    borderRadius: 999,
+    paddingVertical: 16,
+    paddingHorizontal: 46,
+    ...shadow,
+  },
+  matchButtonText: {
+    color: colors.pink,
+    fontSize: 16,
+    fontFamily: fonts.bodyExtraBold,
   },
   candidateCard: {
     paddingBottom: 20,
