@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import Link from 'next/link';
-import { ArrowLeft, Heart, MessageCircle, ChevronDown, ChevronUp, Check, X, Bird } from 'lucide-react';
+import { ArrowLeft, Heart, MessageCircle, ChevronDown, ChevronUp, Check, X, Flame } from 'lucide-react';
 
 function MatchCard({ match, onAccept, onReject }) {
   const [expanded, setExpanded] = useState(false);
@@ -366,10 +366,10 @@ export default function MyMatchesPage() {
       <div className="border-t border-black/5 px-4 py-4 fixed bottom-0 left-0 right-0 bg-background">
         <div className="max-w-lg mx-auto flex items-center gap-2 rounded-[1.75rem] border border-black/5 bg-background px-3 py-3 warm-nav-shell">
           <Link href="/feed" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-slate-400 hover:text-slate-700">
-            <Bird className="w-6 h-6" />
+            <Flame className="w-6 h-6" />
             <span className="text-xs">Feed</span>
           </Link>
-          <Link href="/matches" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-black bg-amber-100/80">
+          <Link href="/matches" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-white bg-black/20">
             <Heart className="w-6 h-6" />
             <span className="text-xs font-medium">Matches</span>
           </Link>

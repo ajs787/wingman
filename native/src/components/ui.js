@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -13,30 +13,96 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Bird } from 'lucide-react-native';
+import Svg, {
+  Defs,
+  ClipPath,
+  LinearGradient as SvgLinearGradient,
+  Stop,
+  G,
+  Path,
+  Circle,
+  Rect,
+  Ellipse,
+} from 'react-native-svg';
+import { LinearGradient } from 'expo-linear-gradient';
 import { fonts } from '../fonts';
-import { colors, shadow } from '../theme';
+import { colors, gradients, shadow } from '../theme';
 
-export function BrandMark({ size = 44, iconSize = 24 }) {
+// The drumstick mark, ported 1:1 from the brand sheet. Unique gradient/clip
+// ids per instance so multiple marks on one screen don't collide.
+function Drumstick({ size = 32 }) {
+  const uid = useId().replace(/[:]/g, '');
+  const grad = `wmGold-${uid}`;
+  const clip = `wmMeat-${uid}`;
+  const meatPath =
+    'M48 82C41 71 43 55 54 44C62 35 74 28 86 32C99 37 101 57 92 69C84 79 70 83 60 85C54 86 51 86 48 82Z';
   return (
-    <View
+    <Svg width={size} height={size} viewBox="0 0 120 120">
+      <Defs>
+        <SvgLinearGradient id={grad} x1="38" y1="100" x2="94" y2="26" gradientUnits="userSpaceOnUse">
+          <Stop offset="0" stopColor="#a85e1d" />
+          <Stop offset="0.45" stopColor="#cd8128" />
+          <Stop offset="0.8" stopColor="#e3a23f" />
+          <Stop offset="1" stopColor="#f1bf58" />
+        </SvgLinearGradient>
+        <ClipPath id={clip}>
+          <Path d={meatPath} />
+        </ClipPath>
+      </Defs>
+      <G transform="translate(60,62) scale(1.16) translate(-59.5,-70.6)">
+        {/* bone — dark base */}
+        <Path d="M55 78 L31 99" stroke="#201913" strokeWidth={15.5} strokeLinecap="round" fill="none" />
+        <Circle cx={27} cy={96} r={9.2} fill="#201913" />
+        <Circle cx={31} cy={105} r={8.2} fill="#201913" />
+        {/* bone — light */}
+        <Path d="M55 78 L31 99" stroke="#efe7d4" strokeWidth={9} strokeLinecap="round" fill="none" />
+        <Circle cx={27} cy={96} r={6} fill="#efe7d4" />
+        <Circle cx={31} cy={105} r={5.4} fill="#efe7d4" />
+        {/* bone — shading */}
+        <Path d="M22.5 99.2A6 6 0 0 0 32 98" fill="none" stroke="#cdbf9f" strokeWidth={2.4} strokeLinecap="round" />
+        <Path d="M26.4 108A5.4 5.4 0 0 0 35.4 106.4" fill="none" stroke="#cdbf9f" strokeWidth={2.2} strokeLinecap="round" />
+        <Path d="M53 80 L34 96" stroke="#cdbf9f" strokeWidth={2.2} strokeLinecap="round" opacity={0.65} />
+        {/* meat */}
+        <G clipPath={`url(#${clip})`}>
+          <Rect x={0} y={0} width={120} height={120} fill={`url(#${grad})`} />
+          <Path d="M44 60C55 69 65 56 76 63C83 67 89 60 96 57L98 100L38 100Z" fill="#6d3917" />
+          <Path d="M60 39C70 33 82 34 88 43C83 39 73 39 65 45C62 47 60 44 60 39Z" fill="#f6cd76" opacity={0.6} />
+          <Ellipse cx={82} cy={41} rx={4} ry={2.6} fill="#fbe6b0" opacity={0.7} transform="rotate(-32 82 41)" />
+        </G>
+        {/* meat outline + crease */}
+        <Path d={meatPath} fill="none" stroke="#201913" strokeWidth={3.6} strokeLinejoin="round" />
+        <Path d="M44 60C55 69 65 56 76 63C83 67 89 60 95 57" fill="none" stroke="#4a2710" strokeWidth={2.4} strokeLinecap="round" />
+      </G>
+    </Svg>
+  );
+}
+
+export function BrandMark({ size = 44 }) {
+  const inner = Math.round(size * 0.78);
+  return (
+    <LinearGradient
+      colors={gradients.pink}
+      start={gradients.pinkStart}
+      end={gradients.pinkEnd}
       style={[
         styles.brandMark,
-        {
-          width: size,
-          height: size,
-          borderRadius: Math.round(size * 0.34),
-        },
+        { width: size, height: size, borderRadius: Math.round(size * 0.28) },
       ]}
     >
-      <View style={styles.websiteBird}>
-        <Bird
-          size={iconSize}
-          color={colors.logoPink}
-          strokeWidth={2.55}
-        />
-      </View>
-    </View>
+      <Drumstick size={inner} />
+    </LinearGradient>
+  );
+}
+
+// 4-point sizzle star, from the brand motion sheet.
+export function Sparkle({ size = 16, color = '#fff' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path
+        d="M12 1C12.7 7 13 9.3 23 12 13 14.7 12.7 17 12 23 11.3 17 11 14.7 1 12 11 9.3 11.3 7 12 1Z"
+        fill={color}
+      />
+    </Svg>
   );
 }
 
@@ -65,6 +131,7 @@ export function Screen({ children, scroll = true, footer, padded = true }) {
 }
 
 export function Button({ children, onPress, variant = 'primary', disabled = false, loading = false, style }) {
+  const isPrimary = variant === 'primary';
   return (
     <Pressable
       onPress={onPress}
@@ -73,23 +140,31 @@ export function Button({ children, onPress, variant = 'primary', disabled = fals
         styles.button,
         variant === 'secondary' && styles.buttonSecondary,
         variant === 'ghost' && styles.buttonGhost,
-        (pressed && !disabled && variant === 'primary') && styles.buttonPressedPrimary,
+        (pressed && !disabled && isPrimary) && styles.buttonPressedScale,
         (pressed && !disabled && variant === 'secondary') && styles.buttonPressedSecondary,
         (pressed && !disabled && variant === 'ghost') && styles.buttonPressedGhost,
         (disabled || loading) && styles.buttonDisabled,
         style,
       ]}
     >
-      {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? '#fff' : colors.text} />
-      ) : (
-        <Text style={[
-          styles.buttonText,
-          variant !== 'primary' && styles.buttonTextSecondary,
-        ]}
-        >
-          {children}
-        </Text>
+      {({ pressed }) => (
+        <>
+          {isPrimary ? (
+            <LinearGradient
+              colors={gradients.pink}
+              start={gradients.pinkStart}
+              end={gradients.pinkEnd}
+              style={[StyleSheet.absoluteFill, pressed && !disabled && styles.buttonGradientPressed]}
+            />
+          ) : null}
+          {loading ? (
+            <ActivityIndicator color={isPrimary ? '#fff' : colors.text} />
+          ) : (
+            <Text style={[styles.buttonText, !isPrimary && styles.buttonTextSecondary]}>
+              {children}
+            </Text>
+          )}
+        </>
       )}
     </Pressable>
   );
@@ -212,7 +287,7 @@ export function BottomTabs({ current, onNavigate, pending = 0 }) {
               style={[styles.tab, active && styles.tabActive]}
             >
               <View>
-                <Ionicons name={item.icon} size={21} color={active ? colors.text : '#94a3b8'} />
+                <Ionicons name={item.icon} size={21} color={active ? colors.pink : colors.muted} />
                 {item.key === 'matches' && pending > 0 ? (
                   <View style={styles.badgeDot}>
                     <Text style={styles.badgeText}>{pending}</Text>
@@ -229,16 +304,25 @@ export function BottomTabs({ current, onNavigate, pending = 0 }) {
 }
 
 export function Avatar({ uri, name, size = 52 }) {
-  return (
-    <View style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }]}>
-      {uri ? (
+  const dims = { width: size, height: size, borderRadius: size / 2 };
+  if (uri) {
+    return (
+      <View style={[styles.avatar, dims]}>
         <Image source={{ uri }} style={styles.avatarImage} />
-      ) : (
-        <Text style={[styles.avatarText, { fontSize: size * 0.38 }]}>
-          {name?.[0]?.toUpperCase() || '?'}
-        </Text>
-      )}
-    </View>
+      </View>
+    );
+  }
+  return (
+    <LinearGradient
+      colors={gradients.pink}
+      start={gradients.pinkStart}
+      end={gradients.pinkEnd}
+      style={[styles.avatar, dims]}
+    >
+      <Text style={[styles.avatarText, { fontSize: size * 0.38 }]}>
+        {name?.[0]?.toUpperCase() || '?'}
+      </Text>
+    </LinearGradient>
   );
 }
 
@@ -276,6 +360,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.black,
     paddingHorizontal: 18,
+    overflow: 'hidden',
+  },
+  buttonPressedScale: {
+    transform: [{ scale: 0.99 }],
+  },
+  buttonGradientPressed: {
+    opacity: 0.9,
   },
   buttonSecondary: {
     backgroundColor: colors.surface,
@@ -400,12 +491,9 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   brandMark: {
-    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  websiteBird: {
-    transform: [{ rotate: '-12deg' }, { scaleX: -1 }],
+    overflow: 'hidden',
   },
   headerText: {
     flex: 1,
@@ -449,11 +537,11 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: 11,
-    color: '#94a3b8',
+    color: colors.muted,
     fontFamily: fonts.bodyBold,
   },
   tabTextActive: {
-    color: colors.text,
+    color: colors.pink,
   },
   badgeDot: {
     position: 'absolute',

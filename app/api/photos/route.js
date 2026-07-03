@@ -60,6 +60,26 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Position must be 0–4' }, { status: 400 });
   }
 
+  // Force the extension from an image MIME allow-list. Blocks stored XSS (an
+  // uploaded .html/.svg would be served same-origin and execute), blocks path
+  // traversal via a crafted filename, and rejects non-image uploads.
+  const IMAGE_EXT = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+    'image/gif': 'gif',
+    'image/heic': 'heic',
+    'image/heif': 'heic',
+  };
+  const ext = IMAGE_EXT[(file.type || '').toLowerCase()];
+  if (!ext) {
+    return NextResponse.json({ error: 'Only JPEG, PNG, WebP, GIF, or HEIC images are allowed.' }, { status: 415 });
+  }
+  const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+  if (typeof file.size === 'number' && file.size > MAX_UPLOAD_BYTES) {
+    return NextResponse.json({ error: 'Image must be 8 MB or smaller.' }, { status: 413 });
+  }
+
   const userId = session.sub;
   const uploadDir = path.join(process.cwd(), 'public', 'uploads', userId);
   await mkdir(uploadDir, { recursive: true });
@@ -75,13 +95,15 @@ export async function POST(request) {
     await unlink(oldPath).catch(() => {});
   }
 
-  // Save new file
-  const ext = (file.name?.split('.').pop() || 'jpg').toLowerCase();
+  // Save new file (ext is the validated image extension from the allow-list above)
   const random = Math.random().toString(36).slice(2, 8);
   const filename = `${position}-${random}.${ext}`;
   const filePath = path.join(uploadDir, filename);
 
   const arrayBuffer = await file.arrayBuffer();
+  if (arrayBuffer.byteLength > MAX_UPLOAD_BYTES) {
+    return NextResponse.json({ error: 'Image must be 8 MB or smaller.' }, { status: 413 });
+  }
   await writeFile(filePath, Buffer.from(arrayBuffer));
 
   // Update photos array in MongoDB

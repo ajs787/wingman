@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, MessageCircle, Heart, Bird } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Heart, Flame } from 'lucide-react';
 
 function ChatPreview({ chat, onClick }) {
   const timeAgo = (date) => {
@@ -152,14 +152,14 @@ export default function ChatListPage() {
       <div className="border-t border-black/5 px-4 py-4 sticky bottom-0 bg-background">
         <div className="max-w-lg mx-auto flex items-center gap-2 rounded-[1.75rem] border border-black/5 bg-background px-3 py-3 warm-nav-shell">
           <Link href="/feed" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-slate-400 hover:text-slate-700">
-            <Bird className="w-6 h-6" />
+            <Flame className="w-6 h-6" />
             <span className="text-xs">Feed</span>
           </Link>
           <Link href="/matches" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-slate-400 hover:text-slate-700">
             <Heart className="w-6 h-6" />
             <span className="text-xs">Matches</span>
           </Link>
-          <Link href="/chat" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-black bg-amber-100/80">
+          <Link href="/chat" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-white bg-black/20">
             <MessageCircle className="w-6 h-6" />
             <span className="text-xs font-medium">Chats</span>
           </Link>

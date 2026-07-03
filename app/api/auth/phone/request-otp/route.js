@@ -5,8 +5,14 @@ import { connectDB } from '@/lib/mongodb';
 import OTP from '@/lib/models/OTP';
 import { phoneSchema } from '@/lib/validations';
 import { generateOTP, hashOTP, normalizeUSPhone, PHONE_OTP_RESEND_COOLDOWN_MS, sendOTP } from '@/lib/phone-otp';
+import { rateLimit, clientIp } from '@/lib/rate-limit';
 
 export async function POST(request) {
+  const rl = rateLimit(`otp-request:${clientIp(request)}`, { limit: 4, windowMs: 60_000 });
+  if (!rl.ok) {
+    return NextResponse.json({ error: 'Too many requests. Please wait a minute and try again.' }, { status: 429 });
+  }
+
   let body;
   try { body = await request.json(); } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });

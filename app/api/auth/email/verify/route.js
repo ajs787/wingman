@@ -7,6 +7,7 @@ import User from '@/lib/models/User';
 import { signToken } from '@/lib/auth';
 import { setSessionCookie } from '@/lib/auth-cookies';
 import { isEmailVerificationCodeValid } from '@/lib/email-verification';
+import { rateLimit, clientIp } from '@/lib/rate-limit';
 
 const verifySchema = z.object({
   email: z.string().email(),
@@ -14,6 +15,11 @@ const verifySchema = z.object({
 });
 
 export async function POST(request) {
+  const rl = rateLimit(`email-verify:${clientIp(request)}`, { limit: 10, windowMs: 60_000 });
+  if (!rl.ok) {
+    return NextResponse.json({ error: 'Too many attempts. Please wait a minute and try again.' }, { status: 429 });
+  }
+
   let body;
   try { body = await request.json(); } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });

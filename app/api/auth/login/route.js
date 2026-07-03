@@ -7,8 +7,14 @@ import User from '@/lib/models/User';
 import { signToken } from '@/lib/auth';
 import { setSessionCookie } from '@/lib/auth-cookies';
 import { loginSchema } from '@/lib/validations';
+import { rateLimit, clientIp } from '@/lib/rate-limit';
 
 export async function POST(request) {
+  const rl = rateLimit(`login:${clientIp(request)}`, { limit: 8, windowMs: 60_000 });
+  if (!rl.ok) {
+    return NextResponse.json({ error: 'Too many login attempts. Please wait a minute and try again.' }, { status: 429 });
+  }
+
   let body;
   try { body = await request.json(); } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
