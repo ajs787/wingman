@@ -9,7 +9,7 @@ import { blockSchema } from '@/lib/safety/validation';
 import { createBlock } from '@/lib/safety/blocking';
 
 export async function POST(request) {
-  const session = getSession(request);
+  const session = await getSession(request);
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

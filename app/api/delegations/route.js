@@ -30,7 +30,7 @@ function serializeUser(u) {
 
 // GET /api/delegations — delegates I manage (as owner) + owners I'm swiping for
 export async function GET(request) {
-  const session = getSession(request);
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   await connectDB();
@@ -67,7 +67,7 @@ const revokeSchema = z.object({
 
 // DELETE /api/delegations — revoke a delegation (owner only)
 export async function DELETE(request) {
-  const session = getSession(request);
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   let body;

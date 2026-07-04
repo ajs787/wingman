@@ -28,7 +28,7 @@ const filtersSchema = z.object({
 
 // PUT /api/profile/filters — update user's swipe filters
 export async function PUT(request) {
-  const session = getSession(request);
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   let body;

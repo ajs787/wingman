@@ -20,7 +20,7 @@ const settingsSchema = z.object({
 
 // GET /api/account — get account settings
 export async function GET(request) {
-  const session = getSession(request);
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   await connectDB();
@@ -38,7 +38,7 @@ export async function GET(request) {
 
 // PUT /api/account — update account settings
 export async function PUT(request) {
-  const session = getSession(request);
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   let body;
@@ -72,7 +72,7 @@ export async function PUT(request) {
 
 // DELETE /api/account — delete account and all associated data
 export async function DELETE(request) {
-  const session = getSession(request);
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const userId = session.sub;

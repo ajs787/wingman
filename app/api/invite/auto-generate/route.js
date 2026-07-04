@@ -7,7 +7,7 @@ import { getSession } from '@/lib/auth';
 import { generateInviteCode } from '@/lib/utils';
 
 export async function POST(request) {
-  const session = getSession(request);
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   await connectDB();

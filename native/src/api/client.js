@@ -1,11 +1,46 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 const SESSION_COOKIE_NAME = 'wingman_session';
 const SESSION_COOKIE_KEY = 'wingman.sessionCookie';
 const SESSION_TOKEN_KEY = 'wingman.sessionToken';
 const USER_KEY = 'wingman.user';
+
+// The session token/cookie are secrets — keep them in the device Keychain
+// (expo-secure-store), not plaintext AsyncStorage. Falls back to AsyncStorage
+// where SecureStore is unavailable (e.g. web), and migrates tokens saved by
+// older builds that used AsyncStorage.
+async function secureGet(key) {
+  try {
+    const value = await SecureStore.getItemAsync(key);
+    if (value != null) return value;
+  } catch {}
+  const legacy = await AsyncStorage.getItem(key).catch(() => null);
+  if (legacy != null) {
+    try {
+      await SecureStore.setItemAsync(key, legacy);
+      await AsyncStorage.removeItem(key);
+    } catch {}
+    return legacy;
+  }
+  return null;
+}
+
+async function secureSet(key, value) {
+  try {
+    await SecureStore.setItemAsync(key, value);
+    await AsyncStorage.removeItem(key).catch(() => {});
+  } catch {
+    await AsyncStorage.setItem(key, value);
+  }
+}
+
+async function secureDelete(key) {
+  await SecureStore.deleteItemAsync(key).catch(() => {});
+  await AsyncStorage.removeItem(key).catch(() => {});
+}
 
 function getExpoHost() {
   const hostUri =
@@ -79,18 +114,18 @@ async function persistCookieFromResponse(response) {
 
   const value = sessionCookie.split('=')[1];
   if (!value) {
-    await AsyncStorage.removeItem(SESSION_COOKIE_KEY);
-    await AsyncStorage.removeItem(SESSION_TOKEN_KEY);
+    await secureDelete(SESSION_COOKIE_KEY);
+    await secureDelete(SESSION_TOKEN_KEY);
   } else {
-    await AsyncStorage.setItem(SESSION_COOKIE_KEY, sessionCookie);
-    await AsyncStorage.setItem(SESSION_TOKEN_KEY, value);
+    await secureSet(SESSION_COOKIE_KEY, sessionCookie);
+    await secureSet(SESSION_TOKEN_KEY, value);
   }
 }
 
 async function persistSessionToken(data) {
   const sessionToken = data?.sessionToken || data?.token;
   if (sessionToken) {
-    await AsyncStorage.setItem(SESSION_TOKEN_KEY, sessionToken);
+    await secureSet(SESSION_TOKEN_KEY, sessionToken);
   }
 }
 
@@ -108,7 +143,9 @@ export async function saveStoredUser(user) {
 }
 
 export async function clearSession() {
-  await AsyncStorage.multiRemove([SESSION_COOKIE_KEY, SESSION_TOKEN_KEY, USER_KEY]);
+  await secureDelete(SESSION_COOKIE_KEY);
+  await secureDelete(SESSION_TOKEN_KEY);
+  await AsyncStorage.removeItem(USER_KEY);
 }
 
 export async function apiRequest(path, options = {}) {
@@ -120,8 +157,8 @@ export async function apiRequest(path, options = {}) {
   } = options;
 
   const [sessionCookie, sessionToken] = await Promise.all([
-    AsyncStorage.getItem(SESSION_COOKIE_KEY),
-    AsyncStorage.getItem(SESSION_TOKEN_KEY),
+    secureGet(SESSION_COOKIE_KEY),
+    secureGet(SESSION_TOKEN_KEY),
   ]);
   const requestHeaders = {
     Accept: 'application/json',

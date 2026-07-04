@@ -10,7 +10,7 @@ import { getDailyLikeLimit } from '@/lib/like-limits';
 
 // GET /api/subscription — current plan, benefits, and quota
 export async function GET(request) {
-  const session = getSession(request);
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   await connectDB();
@@ -33,7 +33,7 @@ const actionSchema = z.object({
 // payment provider (Stripe Billing or Apple In-App Purchase for iOS) and this
 // endpoint should only flip the tier after a verified purchase/webhook.
 export async function POST(request) {
-  const session = getSession(request);
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   let body;
