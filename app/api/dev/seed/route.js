@@ -12,7 +12,7 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Only available in development' }, { status: 403 });
   }
 
-  const session = getSession(request);
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   await connectDB();

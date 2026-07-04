@@ -15,7 +15,7 @@ function photoUrl(photo, userId) {
 
 // GET /api/chat/list - get all active chats for current user
 export async function GET(request) {
-  const session = getSession(request);
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   await connectDB();

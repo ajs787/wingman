@@ -27,7 +27,7 @@ const reorderSchema = z.object({
 });
 
 export async function POST(request) {
-  const session = getSession(request);
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { searchParams } = new URL(request.url);
@@ -124,7 +124,7 @@ export async function POST(request) {
 }
 
 export async function DELETE(request) {
-  const session = getSession(request);
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { searchParams } = new URL(request.url);

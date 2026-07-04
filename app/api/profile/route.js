@@ -18,7 +18,7 @@ function photoWithUrl(photo, userId) {
 
 // GET /api/profile — return current user's profile + photos
 export async function GET(request) {
-  const session = getSession(request);
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   await connectDB();
@@ -96,7 +96,7 @@ const profileSchema = z.object({
 
 // PUT /api/profile — update profile fields
 export async function PUT(request) {
-  const session = getSession(request);
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   let body;
