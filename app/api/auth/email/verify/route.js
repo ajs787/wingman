@@ -48,7 +48,7 @@ export async function POST(request) {
       );
     }
 
-    const token = signToken({ sub: user._id.toString(), email, netid: user.netid });
+    const token = signToken({ sub: user._id.toString(), email, netid: user.netid, tv: user.token_version || 0 });
     const response = NextResponse.json({
       ok: true,
       userId: user._id.toString(),
@@ -90,7 +90,7 @@ export async function POST(request) {
     );
   }
 
-  const token = signToken({ sub: user._id.toString(), email, netid: user.netid });
+  const token = signToken({ sub: user._id.toString(), email, netid: user.netid, tv: user.token_version || 0 });
   const response = NextResponse.json({
     ok: true,
     userId: user._id.toString(),

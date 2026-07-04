@@ -113,7 +113,8 @@ export async function POST(request) {
     const token = signToken({
       sub: user._id.toString(),
       email: user.email,
-      netid: user.netid
+      netid: user.netid,
+      tv: user.token_version || 0,
     });
 
     const response = NextResponse.json({

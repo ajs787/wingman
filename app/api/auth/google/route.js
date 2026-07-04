@@ -8,7 +8,13 @@ import { signToken } from '@/lib/auth';
 import { setSessionCookie } from '@/lib/auth-cookies';
 import { emailSchema } from '@/lib/validations';
 
-const client = new OAuth2Client('379185107870-dnihr4sldvtrs9i38uim0aj61u8rp6n1.apps.googleusercontent.com');
+// Google client ID is public (it ships to the browser), but keep it in env so it
+// can differ per environment / be rotated without a code change.
+const GOOGLE_CLIENT_ID =
+  process.env.GOOGLE_CLIENT_ID ||
+  '379185107870-dnihr4sldvtrs9i38uim0aj61u8rp6n1.apps.googleusercontent.com';
+
+const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 export async function POST(request) {
   let body;
@@ -25,7 +31,7 @@ export async function POST(request) {
     // Verify Google ID token
     const ticket = await client.verifyIdToken({
       idToken,
-      audience: '379185107870-dnihr4sldvtrs9i38uim0aj61u8rp6n1.apps.googleusercontent.com',
+      audience: GOOGLE_CLIENT_ID,
     });
 
     const payload = ticket.getPayload();
@@ -83,7 +89,8 @@ export async function POST(request) {
     const token = signToken({
       sub: user._id.toString(),
       email: emailLower,
-      netid: user.netid
+      netid: user.netid,
+      tv: user.token_version || 0,
     });
 
     const response = NextResponse.json({

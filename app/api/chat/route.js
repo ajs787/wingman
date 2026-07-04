@@ -15,7 +15,7 @@ function photoUrl(photo, userId) {
 
 // GET /api/chat?matchId=<matchId>
 export async function GET(request) {
-  const session = getSession(request);
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { searchParams } = new URL(request.url);
@@ -88,7 +88,7 @@ export async function GET(request) {
 
 // POST /api/chat - send a message
 export async function POST(request) {
-  const session = getSession(request);
+  const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   let body;

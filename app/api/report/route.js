@@ -12,7 +12,7 @@ import { createBlock } from '@/lib/safety/blocking';
 import { runModerationAutomation } from '@/lib/safety/automation';
 
 export async function POST(request) {
-  const session = getSession(request);
+  const session = await getSession(request);
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

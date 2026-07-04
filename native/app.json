@@ -30,7 +30,8 @@
     },
     "plugins": [
       "expo-asset",
-      "expo-font"
+      "expo-font",
+      "expo-secure-store"
     ],
     "extra": {
       "apiBaseUrl": "https://www.wingman33.com"

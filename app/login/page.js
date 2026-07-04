@@ -39,7 +39,9 @@ function AuthForm() {
   const handleGoogleScriptLoad = () => {
     if (window.google) {
       google.accounts.id.initialize({
-        client_id: '379185107870-dnihr4sldvtrs9i38uim0aj61u8rp6n1.apps.googleusercontent.com',
+        client_id:
+          process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
+          '379185107870-dnihr4sldvtrs9i38uim0aj61u8rp6n1.apps.googleusercontent.com',
         callback: handleGoogleSignIn,
       });
       google.accounts.id.renderButton(
