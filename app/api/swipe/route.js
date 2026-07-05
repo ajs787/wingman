@@ -6,7 +6,7 @@ import mongoose from 'mongoose';
 import { connectDB } from '@/lib/mongodb';
 import Swipe from '@/lib/models/Swipe';
 import Delegation from '@/lib/models/Delegation';
-import Match from '@/lib/models/Match';
+import PotentialMatch from '@/lib/models/PotentialMatch';
 import User from '@/lib/models/User';
 import { getSession } from '@/lib/auth';
 import { refreshLikeQuotaIfNeeded, getNextResetAt } from '@/lib/like-limits';
@@ -16,7 +16,11 @@ const swipeSchema = z.object({
   owner_user_id:  z.string().min(1),
   target_user_id: z.string().min(1),
   direction:      z.enum(['left', 'right']),
-  friend_note:    z.string().max(200).optional(),
+  // A like can carry a note: plain, a reply to one of the target's prompts, or a
+  // reply to one of the target's photos. Up to 300 characters.
+  friend_note:    z.string().max(300).optional(),
+  comment_type:   z.enum(['none', 'prompt', 'photo']).optional(),
+  comment_ref:    z.string().max(300).optional(),
 });
 
 export async function POST(request) {
@@ -31,7 +35,7 @@ export async function POST(request) {
   const parsed = swipeSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
 
-  const { owner_user_id, target_user_id, direction, friend_note } = parsed.data;
+  const { owner_user_id, target_user_id, direction, friend_note, comment_type, comment_ref } = parsed.data;
 
   if (owner_user_id === session.sub) {
     return NextResponse.json({ error: 'You cannot swipe for yourself.' }, { status: 400 });
@@ -134,56 +138,49 @@ export async function POST(request) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 
-  let matched = false;
+  // A right-swipe is a like: send it to the target's side as a PotentialMatch that
+  // their wingmen will review. Match creation is deferred to the receiver's accept
+  // (see app/api/likes/decision). Left-swipes are recorded only for feed exclusion.
+  let potentialMatchId = null;
 
   if (direction === 'right') {
-    // Check for reciprocal right-swipe
-    const reciprocal = await Swipe.findOne({
-      owner_user_id: target_user_id,
-      target_user_id: owner_user_id,
-      direction: 'right',
-    });
+    const sender = {
+      wingman_user_id: new mongoose.Types.ObjectId(session.sub),
+      comment: friend_note || null,
+      comment_type: comment_type || 'none',
+      comment_ref: comment_ref || null,
+      createdAt: new Date(),
+    };
 
-    if (reciprocal) {
-      // Create match — ordered pair by consistent string comparison
-      const a = owner_user_id < target_user_id ? owner_user_id : target_user_id;
-      const b = owner_user_id < target_user_id ? target_user_id : owner_user_id;
-      const isOwnerUserA = owner_user_id === a;
-
-      // Convert to ObjectIds for consistent storage
-      const aOid = new mongoose.Types.ObjectId(a);
-      const bOid = new mongoose.Types.ObjectId(b);
-      const sessionOid = new mongoose.Types.ObjectId(session.sub);
-
-      try {
-        await Match.create({
-          user_a: aOid,
-          user_b: bOid,
-          user_a_status: 'pending',
-          user_b_status: 'pending',
-          ...(isOwnerUserA ? {
-            user_a_friend_note: friend_note || null,
-            user_a_matched_by: sessionOid,
-            user_b_friend_note: reciprocal.friend_note || null,
-            user_b_matched_by: reciprocal.delegate_user_id,
-          } : {
-            user_b_friend_note: friend_note || null,
-            user_b_matched_by: sessionOid,
-            user_a_friend_note: reciprocal.friend_note || null,
-            user_a_matched_by: reciprocal.delegate_user_id,
-          }),
-        });
-      } catch (err) {
-        if (err.code !== 11000) throw err;
-      }
-
-      matched = true;
+    // Upsert the directed (owner -> target) potential match and add this wingman as a
+    // sender. Pull any prior sender entry from the same wingman first so re-likes
+    // update rather than duplicate. A previously-rejected like reopens as pending.
+    await PotentialMatch.updateOne(
+      { owner_user_id, target_user_id },
+      { $pull: { senders: { wingman_user_id: sender.wingman_user_id } } }
+    );
+    const pm = await PotentialMatch.findOneAndUpdate(
+      { owner_user_id, target_user_id },
+      {
+        $push: { senders: sender },
+        $setOnInsert: { owner_user_id, target_user_id },
+      },
+      { new: true, upsert: true }
+    );
+    // Re-open a dead like when a new wingman vouches for it.
+    if (pm.status === 'rejected') {
+      pm.status = 'pending';
+      await pm.save();
     }
+    potentialMatchId = pm._id.toString();
   }
 
   return NextResponse.json({
     swipe: { id: swipe._id.toString(), direction, matched_at: swipe.createdAt },
-    matched,
+    // A like no longer matches instantly; it is sent to the receiver's wingmen.
+    matched: false,
+    sent: direction === 'right',
+    potentialMatchId,
     likeQuota: direction === 'right'
       ? {
           likesRemaining: likesRemainingAfterReserve,
