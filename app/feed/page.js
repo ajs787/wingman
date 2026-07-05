@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import ThemeToggle from '@/components/theme-toggle';
 import Link from 'next/link';
-import { Users, Plus, Heart, ChevronRight, UserCircle, Sparkles, Flame, MessageCircle, Settings } from 'lucide-react';
+import { Users, Plus, Heart, ChevronRight, UserCircle, Sparkles, Flame, MessageCircle, Settings, Mail, Trophy } from 'lucide-react';
 import { BrandMark, Wordmark } from '@/components/brand';
 import { BASIC_MAX_ACTIVE_DELEGATIONS } from '@/lib/constants';
 
@@ -17,25 +17,44 @@ export default function FeedPage() {
   const [myProfile, setMyProfile] = useState(null);
   const [matchCount, setMatchCount] = useState(0);
   const [pendingMatchCount, setPendingMatchCount] = useState(0);
+  const [incomingCount, setIncomingCount] = useState(0);
+  const [myRank, setMyRank] = useState(null);
+  const [crew, setCrew] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
-        const [profileRes, delegationsRes] = await Promise.all([
+        const [profileRes, delegationsRes, rankRes] = await Promise.all([
           fetch('/api/profile'),
           fetch('/api/delegations'),
+          fetch('/api/wingman/rank'),
         ]);
+        if (rankRes.ok) {
+          const { rank } = await rankRes.json();
+          setMyRank(rank ?? null);
+        }
         if (profileRes.ok) {
           const { profile } = await profileRes.json();
           setMyProfile(profile);
-          // Load my matches count
           if (profile?._id) {
-            const matchRes = await fetch(`/api/matches?ownerId=${profile._id}`);
+            const [matchRes, incomingRes, crewRes] = await Promise.all([
+              fetch(`/api/matches?ownerId=${profile._id}`),
+              fetch(`/api/likes/incoming?ownerId=${profile._id}`),
+              fetch(`/api/wingman/rank?ownerId=${profile._id}`),
+            ]);
             if (matchRes.ok) {
               const { matches } = await matchRes.json();
               setMatchCount(matches?.length ?? 0);
               setPendingMatchCount(matches?.filter(m => m.myStatus === 'pending')?.length ?? 0);
+            }
+            if (incomingRes.ok) {
+              const { incoming } = await incomingRes.json();
+              setIncomingCount(incoming?.filter((row) => row.status === 'pending')?.length ?? 0);
+            }
+            if (crewRes.ok) {
+              const { leaderboard } = await crewRes.json();
+              setCrew(leaderboard ?? []);
             }
           }
         }
@@ -125,7 +144,100 @@ export default function FeedPage() {
               <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-black transition-colors" />
             </div>
           </Link>
+
+          {/* Incoming likes for my wingmen (and me) to review */}
+          {myProfile?._id && (
+            <Link href={`/likes/${myProfile._id}`}>
+              <div className="mt-3 flex items-center justify-between p-4 rounded-[1.5rem] border border-black/5 bg-background shadow-[0_16px_45px_-30px_rgba(119,77,24,0.30)] hover:border-orange-200 hover:bg-amber-50/60 transition-all group cursor-pointer">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <Mail className="w-8 h-8 text-orange-400" />
+                    {incomingCount > 0 && (
+                      <div className="absolute -top-1 -right-1 w-5 h-5 bg-black rounded-full flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">{incomingCount}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-display font-bold text-slate-800">
+                      {incomingCount > 0 ? `${incomingCount} incoming like${incomingCount !== 1 ? 's' : ''}` : 'Incoming likes'}
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      {incomingCount > 0 ? 'Waiting for your crew to review' : 'Likes sent your way land here'}
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-black transition-colors" />
+              </div>
+            </Link>
+          )}
         </section>
+
+        {/* My wingman rank */}
+        {myRank && (
+          <section className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Trophy className="w-4 h-4 text-orange-500" />
+              <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">My Wingman Rank</h2>
+            </div>
+            <div className="rounded-[1.5rem] border border-black/5 bg-background p-5 shadow-[0_16px_45px_-30px_rgba(119,77,24,0.30)]">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-xl font-display font-extrabold text-slate-900">{myRank.tier}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {Math.round((myRank.acceptRate ?? 0.5) * 100)}% of your likes get accepted
+                  </p>
+                </div>
+                <div className="w-16 h-16 rounded-full bg-[#e0447f] flex flex-col items-center justify-center">
+                  <span className="text-white text-xl font-bold leading-none">{myRank.score}</span>
+                  <span className="text-white/70 text-[10px] font-mono">pts</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-4 divide-x divide-black/5 border-t border-black/5 pt-3 text-center">
+                {[
+                  { label: 'Sent', value: myRank.sent ?? 0 },
+                  { label: 'Accepted', value: myRank.accepted ?? 0 },
+                  { label: 'Matches', value: myRank.confirmedMatches ?? 0 },
+                  { label: 'Assists', value: myRank.assists ?? 0 },
+                ].map((stat) => (
+                  <div key={stat.label}>
+                    <p className="font-bold text-slate-800">{stat.value}</p>
+                    <p className="text-[11px] text-slate-400">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Crew leaderboard: my wingmen, ranked by score */}
+            {crew.length > 0 && (
+              <div className="mt-3 rounded-[1.5rem] border border-black/5 bg-background p-4 shadow-[0_14px_40px_-28px_rgba(119,77,24,0.25)]">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">My crew</p>
+                <div className="space-y-2">
+                  {crew.map((entry, position) => (
+                    <div key={entry.wingman?._id || position} className="flex items-center gap-3">
+                      <span className="w-5 text-center text-sm font-bold text-slate-400">{position + 1}</span>
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-500 flex items-center justify-center flex-shrink-0">
+                        {entry.wingman?.photo ? (
+                          <img src={entry.wingman.photo} alt={entry.wingman.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-white text-xs font-bold">{entry.wingman?.name?.[0] ?? 'W'}</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-700 truncate">{entry.wingman?.name}</p>
+                        <p className="text-[11px] text-slate-400">{entry.tier} · {entry.confirmedMatches ?? 0} matches made</p>
+                      </div>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#e0447f] px-2.5 py-1 text-xs font-bold text-white">
+                        <Flame className="w-3 h-3" />
+                        {entry.score ?? 0}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
 
         {/* Who to swipe for */}
         <section className="mb-8">

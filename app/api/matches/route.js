@@ -6,6 +6,7 @@ import { connectDB } from '@/lib/mongodb';
 import Match from '@/lib/models/Match';
 import Delegation from '@/lib/models/Delegation';
 import Swipe from '@/lib/models/Swipe';
+import PotentialMatch from '@/lib/models/PotentialMatch';
 import User from '@/lib/models/User';
 import { getSession } from '@/lib/auth';
 import { getBlockedUserIds } from '@/lib/safety/blocking';
@@ -150,6 +151,58 @@ export async function GET(request) {
     });
   });
 
+  // Per-wingman involvement: for each matched pair, who on THIS user's side sent the
+  // like, and who accepted/rejected it. Receiver direction (owner=other, target=me)
+  // holds my wingmen's accept/reject decisions; sender direction (owner=me) holds the
+  // wingmen who sent the like.
+  const otherOids = otherIds
+    .map((id) => id.toString())
+    .filter((id) => mongoose.Types.ObjectId.isValid(id))
+    .map((id) => new mongoose.Types.ObjectId(id));
+
+  const potentialMatches = await PotentialMatch.find({
+    $or: [
+      { owner_user_id: ownerOid, target_user_id: { $in: otherOids } },
+      { owner_user_id: { $in: otherOids }, target_user_id: ownerOid },
+    ],
+  }).lean();
+
+  // Hydrate every wingman referenced by those potential matches.
+  const pmWingmanIds = potentialMatches.flatMap((pm) => [
+    ...pm.senders.map((s) => s.wingman_user_id?.toString()),
+    ...pm.decisions.map((d) => d.wingman_user_id?.toString()),
+    pm.accepted_by?.toString(),
+  ]).filter(Boolean);
+  const uniquePmWingmanIds = [...new Set(pmWingmanIds)].filter((id) => !delegateMap[id]);
+  if (uniquePmWingmanIds.length) {
+    const extra = await User.find({ _id: { $in: uniquePmWingmanIds } }).select('name photos').lean();
+    extra.forEach((d) => {
+      const uid = d._id.toString();
+      const mainPhotoDoc = d.photos?.slice().sort((a, b) => a.position - b.position)?.[0];
+      delegateMap[uid] = { name: d.name, photo: mainPhotoDoc ? photoUrl(mainPhotoDoc, uid) : null };
+    });
+  }
+  const brief = (id) => (id && delegateMap[id] ? { _id: id, ...delegateMap[id] } : (id ? { _id: id } : null));
+
+  // Index potential matches by the other user, split by direction relative to me.
+  const wingmenByOther = {};
+  potentialMatches.forEach((pm) => {
+    const owner = pm.owner_user_id.toString();
+    const target = pm.target_user_id.toString();
+    const other = owner === ownerId ? target : owner;
+    const entry = wingmenByOther[other] || { sent: [], decisions: [], matchedBy: null };
+    if (target === ownerId) {
+      // I'm the receiver: my wingmen decided on this incoming like.
+      entry.decisions = pm.decisions.map((d) => ({ wingman: brief(d.wingman_user_id?.toString()), decision: d.decision, at: d.decidedAt }));
+      if (pm.accepted_by) entry.matchedBy = brief(pm.accepted_by.toString());
+    } else {
+      // I'm the sender: my wingmen sent this like.
+      entry.sent = pm.senders.map((s) => ({ wingman: brief(s.wingman_user_id?.toString()), comment: s.comment || null, comment_type: s.comment_type || 'none', comment_ref: s.comment_ref || null, at: s.createdAt }));
+      if (!entry.matchedBy && pm.senders.length) entry.matchedBy = brief(pm.senders[pm.senders.length - 1].wingman_user_id?.toString());
+    }
+    wingmenByOther[other] = entry;
+  });
+
   const matches = matchRows.map((m) => {
     const isUserA = m.user_a.toString() === ownerId;
     const otherId = isUserA ? m.user_b.toString() : m.user_a.toString();
@@ -170,6 +223,8 @@ export async function GET(request) {
       canChat: myStatus === 'accepted' && otherStatus === 'accepted',
       matchedBy: matchedById ? delegateMap[matchedById] ?? null : null,
       matchedByList: swipersByTarget[otherId] || [],
+      // Which of MY wingmen sent the like / accepted / rejected, and who made the match.
+      wingmen: wingmenByOther[otherId] || { sent: [], decisions: [], matchedBy: null },
     };
   });
 

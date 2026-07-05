@@ -9,13 +9,31 @@ import { useToast } from '@/components/ui/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
-import { ArrowLeft, X, Heart, SlidersHorizontal, Cake, Magnet, Ruler, MapPin, Leaf, Pill, School, BookOpen, Brain, Sparkles } from 'lucide-react';
+import { ArrowLeft, X, Heart, SlidersHorizontal, Cake, Magnet, Ruler, MapPin, Leaf, Pill, School, BookOpen, Brain, Sparkles, Mail } from 'lucide-react';
 import { US_COLLEGES, COMMON_MAJORS, CLASS_YEARS, GENDERS, RACE_ETHNICITY_OPTIONS } from '@/lib/constants';
+
+const NOTE_MAX_LENGTH = 300;
 
 function ProfileCard({ candidate, onPass, onLike, swiping = false }) {
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [friendNote, setFriendNote] = useState('');
+  // What the like replies to: null = plain like, or { type: 'prompt'|'photo', ref, label }.
+  const [replyTo, setReplyTo] = useState(null);
   const [swipeDir, setSwipeDir] = useState(null);
+
+  const replyOptions = [
+    { key: 'none', label: 'Just a like', value: null },
+    ...(candidate.prompts || []).filter((p) => p?.prompt).map((p, i) => ({
+      key: `prompt-${i}`,
+      label: `“${p.prompt}”`,
+      value: { type: 'prompt', ref: p.prompt },
+    })),
+    ...(candidate.photos || []).map((_, i) => ({
+      key: `photo-${i}`,
+      label: `Photo ${i + 1}`,
+      value: { type: 'photo', ref: String(i) },
+    })),
+  ];
 
   function handlePassPress() {
     setSwipeDir('pass');
@@ -33,10 +51,12 @@ function ProfileCard({ candidate, onPass, onLike, swiping = false }) {
     setShowNoteModal(false);
     setSwipeDir('like');
     const note = friendNote.trim() || null;
+    const reply = replyTo;
     setFriendNote('');
+    setReplyTo(null);
     setTimeout(() => {
       setSwipeDir(null);
-      onLike(note);
+      onLike(note, reply);
     }, 1500);
   }
 
@@ -44,9 +64,10 @@ function ProfileCard({ candidate, onPass, onLike, swiping = false }) {
     setShowNoteModal(false);
     setSwipeDir('like');
     setFriendNote('');
+    setReplyTo(null);
     setTimeout(() => {
       setSwipeDir(null);
-      onLike(null);
+      onLike(null, null);
     }, 1500);
   }
 
@@ -220,16 +241,38 @@ function ProfileCard({ candidate, onPass, onLike, swiping = false }) {
           <div className="w-full bg-white rounded-t-3xl p-6 space-y-4">
             <h3 className="text-lg font-bold text-slate-800">Add a note for {candidate.name}?</h3>
             <p className="text-sm text-slate-500">
-              Tell them why you think they&apos;d be a good match for your friend (optional)
+              Send a plain like, or reply to one of their prompts or photos (optional)
             </p>
+            {replyOptions.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+                {replyOptions.map((option) => {
+                  const active = (option.value?.type || 'none') === (replyTo?.type || 'none') && (option.value?.ref ?? null) === (replyTo?.ref ?? null);
+                  return (
+                    <button
+                      key={option.key}
+                      type="button"
+                      onClick={() => setReplyTo(option.value)}
+                      className={`flex-shrink-0 max-w-[220px] truncate rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                        active
+                          ? 'bg-[#e0447f] border-[#e0447f] text-white'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             <textarea
               value={friendNote}
-              onChange={(e) => setFriendNote(e.target.value)}
-              placeholder="E.g., 'You both love hiking and have the same sense of humor!'"
-              maxLength={200}
+              onChange={(e) => setFriendNote(e.target.value.slice(0, NOTE_MAX_LENGTH))}
+              placeholder={replyTo ? (replyTo.type === 'photo' ? 'Your take on this photo...' : 'Your take on this answer...') : "E.g., 'You both love hiking and have the same sense of humor!'"}
+              maxLength={NOTE_MAX_LENGTH}
               rows={3}
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-black"
             />
+            <p className="text-right text-xs text-slate-400 -mt-2">{friendNote.length}/{NOTE_MAX_LENGTH}</p>
             <div className="flex gap-3">
               <button
                 onClick={skipNote}
@@ -620,7 +663,7 @@ export default function OwnerFeedPage() {
     setSwiping(false);
   }
 
-  async function handleLike(friendNote) {
+  async function handleLike(friendNote, replyTo) {
     const candidate = filteredCandidates[currentIdx];
     if (!candidate || swiping) return;
     setSwiping(true);
@@ -633,6 +676,8 @@ export default function OwnerFeedPage() {
           target_user_id: candidate._id,
           direction: 'right',
           friend_note: friendNote || undefined,
+          comment_type: replyTo?.type || 'none',
+          comment_ref: replyTo?.ref ?? undefined,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -652,10 +697,11 @@ export default function OwnerFeedPage() {
         if (data.likeQuota) {
           setLikesRemaining(data.likeQuota.likesRemaining);
         }
-        if (data.matched) {
+        // A like no longer matches instantly — it goes to the other side's wingmen.
+        if (data.sent) {
           toast({
-            title: "It's a match!",
-            description: `${ownerProfile?.name ?? 'Your friend'} and ${candidate.name} matched!`,
+            title: 'Like sent 💌',
+            description: `${candidate.name}'s wingmen will review it. If one says yes, it's a match.`,
           });
         }
       }
@@ -723,9 +769,16 @@ export default function OwnerFeedPage() {
               <p className="text-sm font-bold text-slate-100">{ownerProfile?.name || '...'}</p>
             </div>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => setShowFilters(true)} className="text-slate-200 hover:bg-slate-800 hover:text-white">
-            <SlidersHorizontal className="w-4 h-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Link href={`/likes/${ownerId}`} title="Review incoming likes">
+              <Button variant="ghost" size="icon" className="text-slate-200 hover:bg-slate-800 hover:text-white">
+                <Mail className="w-4 h-4" />
+              </Button>
+            </Link>
+            <Button variant="ghost" size="icon" onClick={() => setShowFilters(true)} className="text-slate-200 hover:bg-slate-800 hover:text-white">
+              <SlidersHorizontal className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
         {likesRemaining !== undefined && (
           <div className="max-w-sm mx-auto mt-2 flex justify-center">

@@ -10,6 +10,48 @@ import { useToast } from '@/components/ui/use-toast';
 import Link from 'next/link';
 import { ArrowLeft, Heart, MessageCircle, ChevronDown, ChevronUp, Check, X, Flame } from 'lucide-react';
 
+// Full-screen celebration when BOTH actual users have said yes — the wingmen's match
+// is now real. Fires from the accept action, not the swipe (likes are wingman-gated now).
+function MatchCelebrationOverlay({ match, myProfile, onClose, onChat }) {
+  const person = match?.profile;
+  const myPhoto = myProfile?.photos?.[0]?.url;
+  const theirPhoto = person?.photos?.[0]?.url;
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-[#2a0f1d] via-[#e0447f] to-[#2a0f1d] px-8 text-center">
+      <p className="text-white/70 text-sm font-mono tracking-widest uppercase mb-2">your wingmen came through</p>
+      <h2 className="text-white text-4xl font-display font-extrabold mb-8" style={{ animation: 'fadeScale 0.4s ease-out both' }}>
+        It&apos;s a match!
+      </h2>
+      <div className="flex items-center gap-4 mb-8">
+        <div className="w-24 h-24 rounded-full border-4 border-white overflow-hidden bg-gray-500 flex items-center justify-center">
+          {myPhoto ? <img src={myPhoto} alt="You" className="w-full h-full object-cover" /> : <span className="text-white text-3xl font-bold">{myProfile?.name?.[0] ?? 'Y'}</span>}
+        </div>
+        <Heart className="w-8 h-8 text-white fill-white" />
+        <div className="w-24 h-24 rounded-full border-4 border-white overflow-hidden bg-gray-500 flex items-center justify-center">
+          {theirPhoto ? <img src={theirPhoto} alt={person?.name} className="w-full h-full object-cover" /> : <span className="text-white text-3xl font-bold">{person?.name?.[0] ?? '?'}</span>}
+        </div>
+      </div>
+      <p className="text-white/90 text-sm mb-8 max-w-xs">
+        You and {person?.first_name || person?.name || 'your match'} both said yes — go say hi!
+      </p>
+      <div className="flex flex-col gap-3 w-full max-w-xs">
+        <button onClick={onChat} className="w-full py-3.5 rounded-full bg-white text-[#e0447f] font-bold text-sm">
+          Start chatting
+        </button>
+        <button onClick={onClose} className="w-full py-3.5 rounded-full border border-white/40 text-white font-semibold text-sm">
+          Later
+        </button>
+      </div>
+      <style>{`
+        @keyframes fadeScale {
+          0%   { opacity: 0; transform: scale(0.8); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 function MatchCard({ match, onAccept, onReject }) {
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -129,6 +171,39 @@ function MatchCard({ match, onAccept, onReject }) {
         </div>
       )}
 
+      {/* Your wingmen's take: who accepted/rejected the like, who made the match */}
+      {(match.wingmen?.decisions?.length > 0 || match.wingmen?.sent?.length > 0 || match.wingmen?.matchedBy) && (
+        <div className="px-5 py-4 border-b border-slate-100 space-y-2">
+          <p className="text-xs text-slate-500 font-medium">Your wingmen&apos;s take:</p>
+          {match.wingmen?.matchedBy?.name && (
+            <p className="text-xs text-slate-600">
+              <span className="font-semibold text-[#e0447f]">{match.wingmen.matchedBy.name}</span> made this match for you
+            </p>
+          )}
+          {match.wingmen?.decisions?.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {match.wingmen.decisions.map((decision, decisionIdx) => (
+                <span
+                  key={`${decision.wingman?._id || 'd'}-${decisionIdx}`}
+                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold text-white ${
+                    decision.decision === 'accept' ? 'bg-green-600' : 'bg-red-500'
+                  }`}
+                >
+                  {decision.decision === 'accept' ? <Check className="w-2.5 h-2.5" /> : <X className="w-2.5 h-2.5" />}
+                  {decision.wingman?.name?.split(' ')[0] || 'Wingman'}
+                </span>
+              ))}
+            </div>
+          )}
+          {match.wingmen?.sent?.map((sent, sentIdx) => (
+            <p key={`${sent.wingman?._id || 's'}-${sentIdx}`} className="text-xs text-slate-500">
+              <span className="font-semibold">{sent.wingman?.name || 'A wingman'}</span> sent the like
+              {sent.comment ? <span className="italic"> — &ldquo;{sent.comment}&rdquo;</span> : null}
+            </p>
+          ))}
+        </div>
+      )}
+
       {/* Expandable prompts */}
       {person?.prompts?.length > 0 && (
         <>
@@ -198,8 +273,11 @@ function MatchCard({ match, onAccept, onReject }) {
 
 export default function MyMatchesPage() {
   const [matches, setMatches] = useState([]);
+  const [myProfile, setMyProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [celebration, setCelebration] = useState(null);
   const { toast } = useToast();
+  const router = useRouter();
 
   useEffect(() => {
     loadMatches();
@@ -211,6 +289,7 @@ export default function MyMatchesPage() {
       if (!profileRes.ok) { setLoading(false); return; }
       const { profile } = await profileRes.json();
       if (!profile?._id) { setLoading(false); return; }
+      setMyProfile(profile);
       const res = await fetch(`/api/matches?ownerId=${profile._id}`);
       if (res.ok) {
         const { matches: data } = await res.json();
@@ -229,15 +308,17 @@ export default function MyMatchesPage() {
       });
       if (res.ok) {
         const data = await res.json();
+        let acceptedMatch = null;
         setMatches((prev) =>
-          prev.map((m) =>
-            m._id === matchId
-              ? { ...m, myStatus: 'accepted', canChat: data.canChat }
-              : m
-          )
+          prev.map((m) => {
+            if (m._id !== matchId) return m;
+            acceptedMatch = { ...m, myStatus: 'accepted', canChat: data.canChat };
+            return acceptedMatch;
+          })
         );
+        // Both users have said yes — this is the celebration moment now.
         if (data.canChat) {
-          toast({ title: 'Match accepted!', description: 'You can now chat with your match.' });
+          setCelebration(acceptedMatch);
         } else {
           toast({ title: 'Match accepted!', description: 'Waiting for them to accept too.' });
         }
@@ -379,6 +460,19 @@ export default function MyMatchesPage() {
           </Link>
         </div>
       </div>
+
+      {celebration && (
+        <MatchCelebrationOverlay
+          match={celebration}
+          myProfile={myProfile}
+          onClose={() => setCelebration(null)}
+          onChat={() => {
+            const matchId = celebration._id;
+            setCelebration(null);
+            router.push(`/chat/${matchId}`);
+          }}
+        />
+      )}
     </div>
   );
 }

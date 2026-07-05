@@ -1331,18 +1331,21 @@ function HomeScreen({ profile, onSelectOwner, onRoute, onSignOut, setPendingMatc
   const [matchCount, setMatchCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
   const [invite, setInvite] = useState(null);
+  const [leaderboard, setLeaderboard] = useState([]);
   const [error, setError] = useState('');
 
   async function load() {
     setLoading(true);
     setError('');
     try {
-      const [delegationData, matchData] = await Promise.all([
+      const [delegationData, matchData, rankData] = await Promise.all([
         apiRequest('/api/delegations'),
         profile?._id ? apiRequest(`/api/matches?ownerId=${profile._id}`) : Promise.resolve({ matches: [] }),
+        profile?._id ? apiRequest(`/api/wingman/rank?ownerId=${profile._id}`).catch(() => ({ leaderboard: [] })) : Promise.resolve({ leaderboard: [] }),
       ]);
       setOwners(delegationData.owners || []);
       setDelegates(delegationData.delegates || []);
+      setLeaderboard(rankData.leaderboard || []);
       const matches = matchData.matches || [];
       setMatchCount(matches.length);
       const pending = matches.filter((match) => match.myStatus === 'pending').length;
@@ -1438,46 +1441,99 @@ function HomeScreen({ profile, onSelectOwner, onRoute, onSignOut, setPendingMatc
       {delegates.length ? (
         <>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Friends swiping for me</Text>
+            <Text style={styles.sectionTitle}>My wingman crew</Text>
             <Text style={styles.mutedText}>{delegates.length} active</Text>
           </View>
-          {delegates.map((delegate) => (
-            <View key={delegate._id} style={styles.ownerRow}>
-              <Avatar uri={imageUrl(delegate.photos?.[0]?.url)} name={delegate.name} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.rowTitle}>{delegate.name}</Text>
-                <Text style={styles.mutedText}>Active wingman</Text>
+          {(leaderboard.length ? leaderboard : delegates.map((d) => ({ wingman: { _id: d._id, name: d.name, photo: d.photos?.[0]?.url } }))).map((entry, position) => {
+            const wingman = entry.wingman || {};
+            const hasRank = typeof entry.score === 'number';
+            return (
+              <View key={wingman._id || position} style={styles.ownerRow}>
+                {hasRank ? <Text style={styles.leaderRankText}>{position + 1}</Text> : null}
+                <Avatar uri={imageUrl(wingman.photo)} name={wingman.name} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rowTitle}>{wingman.name}</Text>
+                  <Text style={styles.mutedText}>{hasRank ? `${entry.tier} · ${entry.confirmedMatches || 0} matches made` : 'Active wingman'}</Text>
+                </View>
+                {hasRank ? (
+                  <View style={styles.scorePill}>
+                    <Ionicons name="flame" size={12} color="#fff" />
+                    <Text style={styles.scorePillText}>{entry.score}</Text>
+                  </View>
+                ) : null}
               </View>
-            </View>
-          ))}
+            );
+          })}
         </>
       ) : null}
     </Screen>
   );
 }
 
+const NOTE_MAX_LENGTH = 300;
+
 function NoteModal({ visible, candidate, onCancel, onSubmit }) {
   const [note, setNote] = useState('');
+  // What the like replies to: null = plain like, or { type: 'prompt'|'photo', ref, label }.
+  const [replyTo, setReplyTo] = useState(null);
 
   useEffect(() => {
-    if (!visible) setNote('');
+    if (!visible) {
+      setNote('');
+      setReplyTo(null);
+    }
   }, [visible]);
+
+  const prompts = (candidate?.prompts || []).filter((p) => p?.prompt);
+  const photoCount = (candidate?.photos || []).length;
+  const replyOptions = [
+    { key: 'none', label: 'Just a like', value: null },
+    ...prompts.map((p, i) => ({
+      key: `prompt-${i}`,
+      label: `“${p.prompt}”`,
+      value: { type: 'prompt', ref: p.prompt, label: p.prompt },
+    })),
+    ...Array.from({ length: photoCount }, (_, i) => ({
+      key: `photo-${i}`,
+      label: `Photo ${i + 1}`,
+      value: { type: 'photo', ref: String(i), label: `Photo ${i + 1}` },
+    })),
+  ];
 
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.modalBackdrop}>
         <View style={styles.modalSheet}>
           <Text style={styles.modalTitle}>Add a note?</Text>
-          <Text style={styles.helpText}>Tell {candidate?.first_name || candidate?.name || 'them'} why this could be a good match.</Text>
+          <Text style={styles.helpText}>Send a plain like, or reply to one of {candidate?.first_name || candidate?.name || 'their'}’s prompts or photos.</Text>
+          {replyOptions.length > 1 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.replyChipRow}>
+              {replyOptions.map((option) => {
+                const active = (option.value?.type || 'none') === (replyTo?.type || 'none') && (option.value?.ref ?? null) === (replyTo?.ref ?? null);
+                return (
+                  <Pressable
+                    key={option.key}
+                    onPress={() => setReplyTo(option.value)}
+                    style={[styles.replyChip, active && styles.replyChipActive]}
+                  >
+                    <Text style={[styles.replyChipText, active && styles.replyChipTextActive]} numberOfLines={1}>
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          ) : null}
           <TextField
             value={note}
-            onChangeText={setNote}
-            placeholder="You both love the same things..."
+            onChangeText={(text) => setNote(text.slice(0, NOTE_MAX_LENGTH))}
+            placeholder={replyTo ? `Your take on ${replyTo.type === 'photo' ? 'this photo' : 'this answer'}...` : 'You both love the same things...'}
             multiline
           />
+          <Text style={styles.charCountText}>{note.length}/{NOTE_MAX_LENGTH}</Text>
           <View style={styles.actionRow}>
             <Button style={styles.actionButton} variant="secondary" onPress={onCancel}>Skip</Button>
-            <Button style={styles.actionButton} onPress={() => onSubmit(note.trim() || null)}>Send like</Button>
+            <Button style={styles.actionButton} onPress={() => onSubmit(note.trim() || null, replyTo)}>Send like</Button>
           </View>
         </View>
       </View>
@@ -1492,10 +1548,13 @@ function SwipeScreen({ owner, onBack }) {
   const [index, setIndex] = useState(0);
   const [likedRows, setLikedRows] = useState([]);
   const [likedLoading, setLikedLoading] = useState(false);
-  const [swiping, setSwiping] = useState(false);
+  const [incomingRows, setIncomingRows] = useState([]);
+  const [incomingLoading, setIncomingLoading] = useState(false);
   const [error, setError] = useState('');
-  const [noteOpen, setNoteOpen] = useState(false);
   const [matchInfo, setMatchInfo] = useState(null);
+  const [sentName, setSentName] = useState(null);
+  const [threadFor, setThreadFor] = useState(null);
+  const sentTimer = useRef(null);
 
   const candidate = candidates[index];
 
@@ -1525,13 +1584,28 @@ function SwipeScreen({ owner, onBack }) {
     }
   }
 
+  async function loadIncoming(silent = false) {
+    if (!silent) setIncomingLoading(true);
+    try {
+      const data = await apiRequest(`/api/likes/incoming?ownerId=${owner._id}`);
+      setIncomingRows(data.incoming || []);
+    } catch (err) {
+      if (!silent) setError(err.message);
+    } finally {
+      if (!silent) setIncomingLoading(false);
+    }
+  }
+
   useEffect(() => {
     loadFeed();
     loadLiked(true);
+    loadIncoming(true);
+    return () => { if (sentTimer.current) clearTimeout(sentTimer.current); };
   }, [owner?._id]);
 
   // Optimistic: advance the deck instantly for a snappy feel, persist in the background.
-  function swipe(direction, friendNote = null) {
+  // A right-swipe no longer instant-matches — it lands with the other side's wingmen.
+  function swipe(direction, friendNote = null, replyTo = null) {
     const target = candidates[index];
     if (!target) return;
     setError('');
@@ -1543,14 +1617,18 @@ function SwipeScreen({ owner, onBack }) {
         target_user_id: target._id,
         direction,
         friend_note: friendNote,
+        comment_type: replyTo?.type || 'none',
+        comment_ref: replyTo?.ref ?? undefined,
       },
     })
       .then((data) => {
-        if (data.matched) {
+        if (data.sent) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-          setMatchInfo({ candidate: target });
+          setSentName(target.first_name || target.name || 'them');
+          if (sentTimer.current) clearTimeout(sentTimer.current);
+          sentTimer.current = setTimeout(() => setSentName(null), 2200);
+          loadLiked(true);
         }
-        if (direction === 'right') loadLiked(true);
       })
       .catch((err) => {
         if (err.data?.code === 'LIKE_LIMIT_REACHED') {
@@ -1561,6 +1639,30 @@ function SwipeScreen({ owner, onBack }) {
       });
   }
 
+  // Accept/reject an incoming like on the owner's behalf. Accepting is the moment a
+  // wingman makes the match — that's where the celebration fires now.
+  async function decide(row, action) {
+    try {
+      const data = await apiRequest('/api/likes/decision', {
+        method: 'POST',
+        body: { potential_match_id: row._id, action },
+      });
+      setIncomingRows((prev) => prev.map((item) => (
+        item._id === row._id
+          ? { ...item, status: data.status, myDecision: action, matchId: data.matchId || item.matchId }
+          : item
+      )));
+      if (action === 'accept' && data.matchCreated) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        setMatchInfo({ candidate: row.candidate });
+      } else {
+        Haptics.selectionAsync().catch(() => {});
+      }
+    } catch (err) {
+      Alert.alert('Could not save decision', err.message);
+    }
+  }
+
   return (
     <Screen scroll={false} padded={false}>
       <View style={styles.swipeShell}>
@@ -1568,23 +1670,27 @@ function SwipeScreen({ owner, onBack }) {
         <View style={styles.feedTabs}>
           {[
             { key: 'feed', label: 'Feed', icon: 'albums' },
-            { key: 'liked', label: 'Liked', icon: 'heart' },
+            { key: 'liked', label: 'Sent', icon: 'heart' },
+            { key: 'incoming', label: 'Likes in', icon: 'mail-unread' },
           ].map((item) => {
             const active = tab === item.key;
+            const pendingIncoming = incomingRows.filter((row) => row.status === 'pending' && !row.myDecision).length;
+            const badge = item.key === 'liked' ? likedRows.length : item.key === 'incoming' ? pendingIncoming : 0;
             return (
               <Pressable
                 key={item.key}
                 onPress={() => {
                   setTab(item.key);
                   if (item.key === 'liked') loadLiked();
+                  if (item.key === 'incoming') loadIncoming();
                 }}
                 style={[styles.feedTab, active && styles.feedTabActive]}
               >
                 <Ionicons name={item.icon} size={17} color={active ? colors.text : colors.muted} />
                 <Text style={[styles.feedTabText, active && styles.feedTabTextActive]}>{item.label}</Text>
-                {item.key === 'liked' && likedRows.length > 0 ? (
+                {badge > 0 ? (
                   <View style={styles.likedCountBadge}>
-                    <Text style={styles.likedCountText}>{likedRows.length}</Text>
+                    <Text style={styles.likedCountText}>{badge}</Text>
                   </View>
                 ) : null}
               </Pressable>
@@ -1600,13 +1706,38 @@ function SwipeScreen({ owner, onBack }) {
           ) : likedRows.length === 0 ? (
             <EmptyState
               icon="heart"
-              title="No liked profiles"
-              body="People your friend's wingmen like will show up here."
+              title="No likes sent yet"
+              body="Profiles you and the other wingmen like will show up here."
             />
           ) : (
             <ScrollView style={styles.candidateScroll} showsVerticalScrollIndicator={false}>
               {likedRows.map((item) => (
                 <LikedCandidateCard key={item.targetId} item={item} />
+              ))}
+            </ScrollView>
+          )
+        ) : tab === 'incoming' ? (
+          incomingLoading ? (
+            <View style={styles.centered}>
+              <ActivityIndicator color={colors.black} />
+            </View>
+          ) : incomingRows.length === 0 ? (
+            <EmptyState
+              icon="mail-open"
+              title="No incoming likes"
+              body={`When someone's wingman likes ${owner.first_name || owner.name}, it lands here for you to review.`}
+            />
+          ) : (
+            <ScrollView style={styles.candidateScroll} showsVerticalScrollIndicator={false}>
+              {incomingRows.map((row) => (
+                <IncomingLikeCard
+                  key={row._id}
+                  row={row}
+                  ownerName={owner.first_name || owner.name}
+                  onAccept={() => decide(row, 'accept')}
+                  onReject={() => decide(row, 'reject')}
+                  onThread={() => setThreadFor(row)}
+                />
               ))}
             </ScrollView>
           )
@@ -1623,11 +1754,23 @@ function SwipeScreen({ owner, onBack }) {
         ) : (
           <SwipeDeck candidates={candidates} index={index} onCommit={swipe} />
         )}
+        {sentName ? (
+          <View style={styles.sentToast} pointerEvents="none">
+            <Ionicons name="paper-plane" size={16} color="#fff" />
+            <Text style={styles.sentToastText}>Like sent — {sentName}’s wingmen will review it</Text>
+          </View>
+        ) : null}
         <MatchCelebration
           visible={!!matchInfo}
           owner={owner}
           candidate={matchInfo?.candidate}
+          subtitle={`You matched ${owner.first_name || owner.name || 'your friend'} with ${matchInfo?.candidate?.first_name || matchInfo?.candidate?.name || 'someone'} — it's in both of their matches to confirm.`}
           onClose={() => setMatchInfo(null)}
+        />
+        <WingmanThreadModal
+          row={threadFor}
+          visible={!!threadFor}
+          onClose={() => setThreadFor(null)}
         />
       </View>
     </Screen>
@@ -1726,13 +1869,13 @@ function SwipeDeck({ candidates, index, onCommit }) {
   const nextScale = pan.x.interpolate({ inputRange: [-SCREEN_W / 2, 0, SCREEN_W / 2], outputRange: [1, 0.93, 1], extrapolate: 'clamp' });
   const nextOpacity = pan.x.interpolate({ inputRange: [-SCREEN_W / 2, 0, SCREEN_W / 2], outputRange: [1, 0.5, 1], extrapolate: 'clamp' });
 
-  const forceSwipe = (direction, note = null) => {
+  const forceSwipe = (direction, note = null, replyTo = null) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     const toX = direction === 'right' ? SCREEN_W * 1.35 : -SCREEN_W * 1.35;
     Animated.timing(pan, { toValue: { x: toX, y: 0 }, duration: 230, easing: Easing.out(Easing.quad), useNativeDriver: true }).start(() => {
       pan.setValue({ x: 0, y: 0 });
       crossed.current = false;
-      onCommit(direction, note);
+      onCommit(direction, note, replyTo);
     });
   };
 
@@ -1807,7 +1950,7 @@ function SwipeDeck({ candidates, index, onCommit }) {
         visible={noteOpen}
         candidate={current}
         onCancel={() => { setNoteOpen(false); forceSwipe('right', null); }}
-        onSubmit={(note) => { setNoteOpen(false); forceSwipe('right', note); }}
+        onSubmit={(note, replyTo) => { setNoteOpen(false); forceSwipe('right', note, replyTo); }}
       />
 
       <Modal visible={detailOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setDetailOpen(false)}>
@@ -1823,7 +1966,7 @@ function SwipeDeck({ candidates, index, onCommit }) {
   );
 }
 
-function MatchCelebration({ visible, owner, candidate, onClose }) {
+function MatchCelebration({ visible, owner, candidate, onClose, subtitle, cta = 'Keep swiping', eyebrow = 'you’re the matchmaker' }) {
   const fade = useRef(new Animated.Value(0)).current;
   const pop = useRef(new Animated.Value(0.6)).current;
   const leftX = useRef(new Animated.Value(-70)).current;
@@ -1868,27 +2011,27 @@ function MatchCelebration({ visible, owner, candidate, onClose }) {
         <Animated.View style={[styles.matchSpark, { bottom: '30%', left: '19%' }, sparkStyle(sparks[2])]} pointerEvents="none"><Sparkle size={18} color="#ffe2ec" /></Animated.View>
         <Animated.View style={[styles.matchSpark, { bottom: '34%', right: '17%' }, sparkStyle(sparks[3])]} pointerEvents="none"><Sparkle size={26} color="#ffffff" /></Animated.View>
 
-        <Text style={styles.matchEyebrow}>you’re the matchmaker</Text>
+        <Text style={styles.matchEyebrow}>{eyebrow}</Text>
         <Animated.Text style={[styles.matchTitle, { transform: [{ scale: pop }] }]}>It’s a match!</Animated.Text>
 
         <View style={styles.matchAvatars}>
           <Animated.View style={[styles.matchAvatarRing, { transform: [{ translateX: leftX }] }]}>
-            <Avatar uri={imageUrl(owner?.photos?.[0])} name={owner?.name} size={104} />
+            <Avatar uri={firstPhoto(owner)} name={owner?.name} size={104} />
           </Animated.View>
           <Animated.View style={[styles.matchHeart, { transform: [{ scale: heart }] }]} pointerEvents="none">
             <Ionicons name="heart" size={28} color={colors.pink} />
           </Animated.View>
           <Animated.View style={[styles.matchAvatarRing, styles.matchAvatarRingRight, { transform: [{ translateX: rightX }] }]}>
-            <Avatar uri={imageUrl(candidate?.photos?.[0])} name={candidate?.name} size={104} />
+            <Avatar uri={firstPhoto(candidate)} name={candidate?.name} size={104} />
           </Animated.View>
         </View>
 
         <Text style={styles.matchSub}>
-          You matched {ownerName} with {candName} — it’s in their matches to review.
+          {subtitle || `You matched ${ownerName} with ${candName} — it’s in their matches to review.`}
         </Text>
 
         <Pressable onPress={onClose} style={({ pressed }) => [styles.matchButton, pressed && styles.circleBtnPressed]}>
-          <Text style={styles.matchButtonText}>Keep swiping</Text>
+          <Text style={styles.matchButtonText}>{cta}</Text>
         </Pressable>
       </Animated.View>
     </Modal>
@@ -1928,6 +2071,168 @@ function LikedCandidateCard({ item }) {
         ))}
       </View>
     </Card>
+  );
+}
+
+// A like sent TO the owner, awaiting this wingman's verdict. Shows the candidate,
+// every sender + their note (plain / prompt reply / photo reply), decisions so far,
+// and accept/reject actions. One reject doesn't kill it — any accept makes the match.
+function IncomingLikeCard({ row, ownerName, onAccept, onReject, onThread }) {
+  const candidate = row.candidate || {};
+  const photo = imageUrl(candidate.photos?.[0]?.url);
+  const senders = row.senders || [];
+  const decisions = row.decisions || [];
+  const accepted = row.status === 'accepted';
+  const decided = !!row.myDecision;
+
+  return (
+    <Card style={styles.likedCard}>
+      <View style={styles.matchTop}>
+        <Avatar uri={photo} name={candidate.name} size={72} />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.cardTitle}>{candidate.name || 'Unknown'}{candidate.age ? `, ${candidate.age}` : ''}</Text>
+          <Text style={styles.mutedText}>{candidate.school || candidate.year || 'Profile'} · {candidate.majors?.join(', ') || candidate.major || '-'}</Text>
+          <Text style={styles.statusText}>
+            {accepted ? `Matched for ${ownerName} ✓` : `Their wingmen think they’d be great for ${ownerName}`}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.swiperList}>
+        {senders.map((sender, senderIndex) => (
+          <View key={`${sender.wingman?._id || 'w'}-${senderIndex}`} style={styles.swiperRow}>
+            <Avatar uri={imageUrl(sender.wingman?.photo)} name={sender.wingman?.name} size={38} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.swiperName}>{sender.wingman?.name || 'A wingman'}</Text>
+              {sender.comment_type === 'prompt' && sender.comment_ref ? (
+                <Text style={styles.replyContextText}>replying to “{sender.comment_ref}”</Text>
+              ) : sender.comment_type === 'photo' ? (
+                <Text style={styles.replyContextText}>replying to photo {Number(sender.comment_ref) + 1 || ''}</Text>
+              ) : null}
+              <Text style={styles.swiperNote} numberOfLines={3}>{sender.comment || 'Sent a like'}</Text>
+            </View>
+          </View>
+        ))}
+      </View>
+
+      {decisions.length > 0 ? (
+        <View style={styles.decisionRow}>
+          {decisions.map((d, i) => (
+            <View key={`${d.wingman?._id || 'd'}-${i}`} style={[styles.decisionPill, d.decision === 'accept' ? styles.decisionPillAccept : styles.decisionPillReject]}>
+              <Ionicons name={d.decision === 'accept' ? 'checkmark' : 'close'} size={12} color="#fff" />
+              <Text style={styles.decisionPillText}>{d.wingman?.name?.split(' ')[0] || 'Wingman'}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      <View style={styles.actionRow}>
+        <Button style={styles.actionButton} variant="secondary" onPress={onThread}>Ask their wingmen</Button>
+        {accepted ? (
+          <Button style={styles.actionButton} disabled>Matched ✓</Button>
+        ) : (
+          <>
+            <Button style={styles.actionButton} variant="secondary" onPress={onReject} disabled={row.myDecision === 'reject'}>
+              {row.myDecision === 'reject' ? 'Passed' : 'Pass'}
+            </Button>
+            <Button style={styles.actionButton} onPress={onAccept}>
+              {decided && row.myDecision === 'accept' ? 'Accepted' : 'Match them'}
+            </Button>
+          </>
+        )}
+      </View>
+    </Card>
+  );
+}
+
+// Back-and-forth between the two sides' wingmen about one potential match.
+function WingmanThreadModal({ row, visible, onClose }) {
+  const [messages, setMessages] = useState([]);
+  const [mySide, setMySide] = useState(null);
+  const [content, setContent] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+
+  async function load() {
+    if (!row?._id) return;
+    setLoading(true);
+    setError('');
+    try {
+      const data = await apiRequest(`/api/likes/${row._id}/thread`);
+      setMessages(data.messages || []);
+      setMySide(data.mySide || null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (visible) {
+      setMessages([]);
+      setContent('');
+      load();
+    }
+  }, [visible, row?._id]);
+
+  async function send() {
+    const trimmed = content.trim();
+    if (!trimmed || sending) return;
+    setSending(true);
+    try {
+      const data = await apiRequest(`/api/likes/${row._id}/thread`, {
+        method: 'POST',
+        body: { body: trimmed },
+      });
+      setMessages((prev) => [...prev, data.message]);
+      setContent('');
+    } catch (err) {
+      Alert.alert('Message failed', err.message);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  const candidateName = row?.candidate?.first_name || row?.candidate?.name || 'them';
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <Screen
+        scroll={false}
+        footer={(
+          <View style={styles.messageComposer}>
+            <View style={{ flex: 1 }}>
+              <TextField value={content} onChangeText={setContent} placeholder={`Talk about ${candidateName}...`} />
+            </View>
+            <IconButton icon="send" label="Send" tone="dark" onPress={send} disabled={sending} />
+          </View>
+        )}
+      >
+        <Header title="Wingman huddle" subtitle={`Both crews, talking about ${candidateName}`} onBack={onClose} />
+        <ErrorBanner message={error} />
+        {loading ? (
+          <ActivityIndicator color={colors.black} />
+        ) : messages.length === 0 ? (
+          <EmptyState icon="chatbubbles" title="No messages yet" body="Ask the other side's wingmen anything before you decide." />
+        ) : (
+          <FlatList
+            data={messages}
+            keyExtractor={(item) => item._id}
+            contentContainerStyle={styles.messages}
+            renderItem={({ item }) => (
+              <View style={[styles.messageBubble, item.mine ? styles.messageMe : styles.messageThem]}>
+                {!item.mine ? (
+                  <Text style={styles.threadSenderText}>{item.sender?.name || 'Wingman'} · {item.side === mySide ? 'your side' : 'their side'}</Text>
+                ) : null}
+                <Text style={[styles.messageText, item.mine && styles.messageTextMe]}>{item.body}</Text>
+              </View>
+            )}
+          />
+        )}
+      </Screen>
+    </Modal>
   );
 }
 
@@ -1995,6 +2300,7 @@ function MatchesScreen({ profile, onRoute, onOpenChat, setPendingMatches }) {
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [celebrate, setCelebrate] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -2026,6 +2332,11 @@ function MatchesScreen({ profile, onRoute, onOpenChat, setPendingMatches }) {
           ? { ...item, myStatus: data.status, canChat: data.canChat }
           : item
       )));
+      // The real celebration moment: both actual users have now said yes.
+      if (action === 'accept' && data.canChat) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        setCelebrate({ ...match, canChat: true });
+      }
     } catch (err) {
       Alert.alert('Match update failed', err.message);
     }
@@ -2037,7 +2348,7 @@ function MatchesScreen({ profile, onRoute, onOpenChat, setPendingMatches }) {
       <ErrorBanner message={error} />
       {loading ? <ActivityIndicator color={colors.black} /> : null}
       {!loading && matches.length === 0 ? (
-        <EmptyState icon="heart" title="No matches yet" body="When both sides get right-swiped, matches appear here." />
+        <EmptyState icon="heart" title="No matches yet" body="When a wingman on each side says yes, the match lands here for you to confirm." />
       ) : null}
       {matches.map((match) => (
         <MatchCard
@@ -2048,6 +2359,19 @@ function MatchesScreen({ profile, onRoute, onOpenChat, setPendingMatches }) {
           onChat={() => onOpenChat(match)}
         />
       ))}
+      <MatchCelebration
+        visible={!!celebrate}
+        owner={profile}
+        candidate={celebrate?.profile}
+        eyebrow="your wingmen came through"
+        subtitle={`You and ${celebrate?.profile?.first_name || celebrate?.profile?.name || 'your match'} both said yes — go say hi!`}
+        cta="Start chatting"
+        onClose={() => {
+          const match = celebrate;
+          setCelebrate(null);
+          if (match) onOpenChat(match);
+        }}
+      />
     </Screen>
   );
 }
@@ -2063,6 +2387,11 @@ function MatchCard({ match, onAccept, onReject, onChat }) {
     : match.matchedBy
       ? [match.matchedBy]
       : [];
+  // Per-wingman transparency: who on MY side sent/accepted/rejected this match.
+  const wingmen = match.wingmen || {};
+  const myCrewDecisions = wingmen.decisions || [];
+  const myCrewSent = wingmen.sent || [];
+  const crewMatchedBy = wingmen.matchedBy;
 
   return (
     <Card style={styles.matchCard}>
@@ -2098,6 +2427,44 @@ function MatchCard({ match, onAccept, onReject, onChat }) {
               </View>
             ))}
           </View>
+        </View>
+      ) : null}
+      {myCrewDecisions.length > 0 || myCrewSent.length > 0 || crewMatchedBy ? (
+        <View style={styles.friendNote}>
+          <Text style={styles.sectionLabel}>Your wingmen’s take</Text>
+          {crewMatchedBy ? (
+            <View style={styles.swiperRow}>
+              <Avatar uri={imageUrl(crewMatchedBy.photo)} name={crewMatchedBy.name} size={34} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.swiperName}>{crewMatchedBy.name || 'A wingman'}</Text>
+                <Text style={styles.swiperNote}>made this match for you</Text>
+              </View>
+              <Ionicons name="heart" size={16} color={colors.pink} />
+            </View>
+          ) : null}
+          {myCrewDecisions.length > 0 ? (
+            <View style={styles.decisionRow}>
+              {myCrewDecisions.map((d, i) => (
+                <View key={`${d.wingman?._id || 'd'}-${i}`} style={[styles.decisionPill, d.decision === 'accept' ? styles.decisionPillAccept : styles.decisionPillReject]}>
+                  <Ionicons name={d.decision === 'accept' ? 'checkmark' : 'close'} size={12} color="#fff" />
+                  <Text style={styles.decisionPillText}>{d.wingman?.name?.split(' ')[0] || 'Wingman'}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+          {myCrewSent.length > 0 ? (
+            <View style={styles.swiperList}>
+              {myCrewSent.map((s, i) => (
+                <View key={`${s.wingman?._id || 's'}-${i}`} style={styles.swiperRow}>
+                  <Avatar uri={imageUrl(s.wingman?.photo)} name={s.wingman?.name} size={34} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.swiperName}>{s.wingman?.name || 'A wingman'} sent the like</Text>
+                    {s.comment ? <Text style={styles.swiperNote} numberOfLines={2}>{s.comment}</Text> : null}
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : null}
         </View>
       ) : null}
       {pending ? (
@@ -2445,7 +2812,52 @@ function DatingFiltersScreen({ profile, onBack, onSaved }) {
   );
 }
 
+// How this user is doing AS a wingman: score, tier, accept rate. Fed by
+// GET /api/wingman/rank (computed live from their sent likes' outcomes).
+function WingmanRankCard({ rank }) {
+  if (!rank) return null;
+  const statItems = [
+    { label: 'Likes sent', value: rank.sent ?? 0 },
+    { label: 'Accepted', value: rank.accepted ?? 0 },
+    { label: 'Matches made', value: rank.confirmedMatches ?? 0 },
+    { label: 'Assists', value: rank.assists ?? 0 },
+  ];
+  return (
+    <Card style={styles.rankCard}>
+      <View style={styles.rankHeader}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.sectionLabel}>Wingman rank</Text>
+          <Text style={styles.rankTierText}>{rank.tier || 'Rookie'}</Text>
+          <Text style={styles.mutedText}>{Math.round((rank.acceptRate ?? 0.5) * 100)}% of your likes get accepted</Text>
+        </View>
+        <View style={styles.rankScoreBubble}>
+          <Text style={styles.rankScoreText}>{rank.score ?? 0}</Text>
+          <Text style={styles.rankScoreLabel}>pts</Text>
+        </View>
+      </View>
+      <View style={styles.rankStatsRow}>
+        {statItems.map((stat) => (
+          <View key={stat.label} style={styles.rankStat}>
+            <Text style={styles.rankStatValue}>{stat.value}</Text>
+            <Text style={styles.rankStatLabel}>{stat.label}</Text>
+          </View>
+        ))}
+      </View>
+    </Card>
+  );
+}
+
 function ProfileScreen({ profile, onRoute, onEdit, onFilters, onSignOut }) {
+  const [rank, setRank] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiRequest('/api/wingman/rank')
+      .then((data) => { if (!cancelled) setRank(data.rank || null); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <Screen footer={<BottomTabs current="profile" onNavigate={onRoute} />}>
       <Header
@@ -2459,6 +2871,7 @@ function ProfileScreen({ profile, onRoute, onEdit, onFilters, onSignOut }) {
         <Text style={styles.mutedText}>{profile?.email}</Text>
         <Text style={styles.mutedText}>{profile?.school || 'School not set'} · {profile?.major || profile?.majors?.[0] || 'Major not set'}</Text>
       </Card>
+      <WingmanRankCard rank={rank} />
       <Button onPress={onEdit}>Edit profile</Button>
       <View style={{ height: 12 }} />
       <Button variant="secondary" onPress={onSignOut}>Sign out</Button>
@@ -3773,5 +4186,181 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 24,
     fontFamily: fonts.displayExtraBold,
+  },
+
+  // --- Like notes: reply-to-prompt/photo chips + counter ---
+  replyChipRow: {
+    flexGrow: 0,
+    marginBottom: 10,
+  },
+  replyChip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    marginRight: 8,
+    maxWidth: 220,
+  },
+  replyChipActive: {
+    backgroundColor: colors.pink,
+    borderColor: colors.pink,
+  },
+  replyChipText: {
+    color: colors.text,
+    fontSize: 13,
+    fontFamily: fonts.bodyMedium,
+  },
+  replyChipTextActive: {
+    color: '#fff',
+  },
+  charCountText: {
+    alignSelf: 'flex-end',
+    color: colors.muted,
+    fontSize: 12,
+    fontFamily: fonts.mono,
+    marginTop: 4,
+    marginBottom: 4,
+  },
+
+  // --- "Like sent" toast (a like now goes to the other side's wingmen) ---
+  sentToast: {
+    position: 'absolute',
+    bottom: 108,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.charcoal,
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    ...shadow,
+  },
+  sentToastText: {
+    color: '#fff',
+    fontSize: 13,
+    fontFamily: fonts.bodyMedium,
+  },
+
+  // --- Incoming likes review ---
+  replyContextText: {
+    color: colors.pink,
+    fontSize: 12,
+    fontFamily: fonts.bodySemiBold,
+    marginBottom: 1,
+  },
+  decisionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 10,
+  },
+  decisionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  decisionPillAccept: {
+    backgroundColor: colors.green,
+  },
+  decisionPillReject: {
+    backgroundColor: colors.red,
+  },
+  decisionPillText: {
+    color: '#fff',
+    fontSize: 12,
+    fontFamily: fonts.bodySemiBold,
+  },
+
+  // --- Wingman thread ---
+  threadSenderText: {
+    color: colors.muted,
+    fontSize: 11,
+    fontFamily: fonts.bodySemiBold,
+    marginBottom: 3,
+  },
+
+  // --- Wingman rank ---
+  leaderRankText: {
+    width: 20,
+    textAlign: 'center',
+    color: colors.muted,
+    fontSize: 15,
+    fontFamily: fonts.displayExtraBold,
+  },
+  scorePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.pink,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  scorePillText: {
+    color: '#fff',
+    fontSize: 13,
+    fontFamily: fonts.bodyExtraBold,
+  },
+  rankCard: {
+    gap: 14,
+    marginBottom: 16,
+  },
+  rankHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  rankTierText: {
+    color: colors.text,
+    fontSize: 22,
+    fontFamily: fonts.displayExtraBold,
+    marginBottom: 2,
+  },
+  rankScoreBubble: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: colors.pink,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rankScoreText: {
+    color: '#fff',
+    fontSize: 22,
+    fontFamily: fonts.displayExtraBold,
+    lineHeight: 26,
+  },
+  rankScoreLabel: {
+    color: '#ffd0e4',
+    fontSize: 11,
+    fontFamily: fonts.mono,
+  },
+  rankStatsRow: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: 12,
+  },
+  rankStat: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+  },
+  rankStatValue: {
+    color: colors.text,
+    fontSize: 18,
+    fontFamily: fonts.displayExtraBold,
+  },
+  rankStatLabel: {
+    color: colors.muted,
+    fontSize: 11,
+    fontFamily: fonts.body,
+    textAlign: 'center',
   },
 });
