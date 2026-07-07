@@ -201,17 +201,13 @@ function IncomingLikeCard({ row, ownerName, onDecide, onThread }) {
         </div>
       )}
 
-      {/* Actions */}
-      <div className="px-5 py-4 flex gap-3">
-        <button
-          onClick={onThread}
-          className="flex-1 py-2.5 rounded-2xl border border-slate-200 text-slate-600 text-sm font-semibold flex items-center justify-center gap-2 hover:bg-slate-50"
-        >
-          <MessageCircle className="w-4 h-4" />
-          Ask their crew
-        </button>
+      {/* Actions: the decision (Pass/Match) is the primary, same-weight binary choice.
+          "Ask their crew" is a distinct kind of action (conversation, not a decision),
+          so it's visually demoted to a text-style link below rather than competing
+          for attention as a third equal-weight button. */}
+      <div className="px-5 py-4 space-y-2">
         {!accepted && (
-          <>
+          <div className="flex gap-3">
             <button
               onClick={() => onDecide(row, 'reject')}
               disabled={row.myDecision === 'reject'}
@@ -227,8 +223,15 @@ function IncomingLikeCard({ row, ownerName, onDecide, onThread }) {
               <Heart className="w-4 h-4" />
               Match them
             </button>
-          </>
+          </div>
         )}
+        <button
+          onClick={onThread}
+          className="w-full py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 flex items-center justify-center gap-1.5"
+        >
+          <MessageCircle className="w-3.5 h-3.5" />
+          Ask their crew about them
+        </button>
       </div>
     </div>
   );

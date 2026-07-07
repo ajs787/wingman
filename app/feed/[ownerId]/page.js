@@ -780,6 +780,10 @@ export default function OwnerFeedPage() {
             </Button>
           </div>
         </div>
+        <p className="text-center text-[11px] text-slate-500 mt-1.5">
+          Likes go to their wingmen for a final yes
+        </p>
+
         {likesRemaining !== undefined && (
           <div className="max-w-sm mx-auto mt-2 flex justify-center">
             {likesRemaining === null ? (
