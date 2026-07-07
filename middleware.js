@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 
-const PUBLIC_PATHS = ['/', '/login'];
+// Legal pages must be reachable without auth — App Store Connect and Apple's
+// reviewers need to load the privacy policy and terms without an account.
+const PUBLIC_PATHS = ['/', '/login', '/privacy', '/terms'];
 
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
