@@ -114,18 +114,25 @@ function LoadingScreen() {
   );
 }
 
+// Spring easing from the brand motion sheet: cubic-bezier(.22,.9,.3,1).
+const BRAND_SPRING = Easing.bezier(0.22, 0.9, 0.3, 1);
+
 function IntroScreen({ onDone }) {
-  const introLogoSize = 96;
+  // Icon tile is 128px inside a 150px stage, matching the launch spec's ratio
+  // (a too-small tile is what made the ring look oversized before).
+  const introLogoSize = 128;
   const containerOpacity = useRef(new Animated.Value(1)).current;
   const backdropOpacity = useRef(new Animated.Value(1)).current;
+  const glowOpacity = useRef(new Animated.Value(0.5)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
-  const logoScale = useRef(new Animated.Value(0.5)).current;
+  const logoScale = useRef(new Animated.Value(0.45)).current;
+  const logoRotate = useRef(new Animated.Value(-10)).current; // degrees
   const introLift = useRef(new Animated.Value(0)).current;
   const introScale = useRef(new Animated.Value(1)).current;
   const ringScale = useRef(new Animated.Value(0.4)).current;
   const ringOpacity = useRef(new Animated.Value(0)).current;
   const titleOpacity = useRef(new Animated.Value(0)).current;
-  const titleLift = useRef(new Animated.Value(14)).current;
+  const titleLift = useRef(new Animated.Value(16)).current;
   const tagOpacity = useRef(new Animated.Value(0)).current;
   const idleBob = useRef(new Animated.Value(0)).current;
   const dotsOpacity = useRef(new Animated.Value(0)).current;
@@ -149,32 +156,57 @@ function IntroScreen({ onDone }) {
         Animated.sequence([
           Animated.delay(delay),
           Animated.timing(value, { toValue: 1, duration: 440, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-          Animated.timing(value, { toValue: 0.4, duration: 440, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+          Animated.timing(value, { toValue: 0.35, duration: 440, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
         ])
       );
 
     const bob = Animated.loop(
       Animated.sequence([
-        Animated.timing(idleBob, { toValue: -7, duration: 950, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(idleBob, { toValue: -9, duration: 950, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
         Animated.timing(idleBob, { toValue: 0, duration: 950, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
       ])
     );
 
+    // Radial glow behind the icon breathes 0.5 -> 0.9 (wm-glow).
+    const glow = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowOpacity, { toValue: 0.9, duration: 2100, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(glowOpacity, { toValue: 0.5, duration: 2100, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ])
+    );
+
+    // Spring-in with the overshoot wobble from wm-icon-in:
+    // scale 0.45 -> 1.12 -> 0.95 -> 1.02 -> 1, rotate -10 -> 4 -> -2 -> 1 -> 0.
+    const wobbleStep = (scaleTo, rotTo, duration, easing = Easing.inOut(Easing.quad)) =>
+      Animated.parallel([
+        Animated.timing(logoScale, { toValue: scaleTo, duration, easing, useNativeDriver: true }),
+        Animated.timing(logoRotate, { toValue: rotTo, duration, easing, useNativeDriver: true }),
+      ]);
+
+    const springIn = Animated.parallel([
+      Animated.timing(logoOpacity, { toValue: 1, duration: 200, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.sequence([
+        wobbleStep(1.12, 4, 240, BRAND_SPRING), // overshoot
+        wobbleStep(0.95, -2, 150),              // settle back
+        wobbleStep(1.02, 1, 140),
+        wobbleStep(1, 0, 130),
+      ]),
+    ]);
+
     const main = Animated.sequence([
       // 1. spring in + ring pulse + sizzle sparks
       Animated.parallel([
-        Animated.timing(logoOpacity, { toValue: 1, duration: 240, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-        Animated.spring(logoScale, { toValue: 1, friction: 5, tension: 80, useNativeDriver: true }),
+        springIn,
         Animated.sequence([
-          Animated.timing(ringOpacity, { toValue: 0.55, duration: 100, useNativeDriver: true }),
+          Animated.timing(ringOpacity, { toValue: 0.5, duration: 120, useNativeDriver: true }),
           Animated.parallel([
-            Animated.timing(ringScale, { toValue: 1.55, duration: 640, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-            Animated.timing(ringOpacity, { toValue: 0, duration: 640, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+            Animated.timing(ringScale, { toValue: 1.5, duration: 700, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+            Animated.timing(ringOpacity, { toValue: 0, duration: 700, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
           ]),
         ]),
-        sparkPop(spark1, 200),
-        sparkPop(spark2, 320),
-        sparkPop(spark3, 430),
+        sparkPop(spark1, 210),
+        sparkPop(spark2, 340),
+        sparkPop(spark3, 450),
       ]),
       // 2. wordmark + tagline rise, loading dots appear
       Animated.parallel([
@@ -184,10 +216,13 @@ function IntroScreen({ onDone }) {
           Animated.delay(160),
           Animated.timing(tagOpacity, { toValue: 1, duration: 440, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
         ]),
-        Animated.timing(dotsOpacity, { toValue: 1, duration: 420, useNativeDriver: true }),
+        Animated.sequence([
+          Animated.delay(120),
+          Animated.timing(dotsOpacity, { toValue: 1, duration: 420, useNativeDriver: true }),
+        ]),
       ]),
       // 3. idle hold (bob + dots pulse)
-      Animated.delay(680),
+      Animated.delay(760),
       // 4. hand off to the app
       Animated.parallel([
         Animated.timing(containerOpacity, { toValue: 0, duration: 540, easing: Easing.inOut(Easing.cubic), useNativeDriver: true }),
@@ -198,6 +233,7 @@ function IntroScreen({ onDone }) {
     ]);
 
     bob.start();
+    glow.start();
     const dotLoops = [dotPulse(dot1, 0), dotPulse(dot2, 150), dotPulse(dot3, 300)];
     dotLoops.forEach((loop) => loop.start());
     main.start(({ finished }) => {
@@ -207,14 +243,25 @@ function IntroScreen({ onDone }) {
     return () => {
       main.stop();
       bob.stop();
+      glow.stop();
       dotLoops.forEach((loop) => loop.stop());
     };
   }, [onDone]);
 
+  const logoRotateDeg = logoRotate.interpolate({ inputRange: [-10, 10], outputRange: ['-10deg', '10deg'] });
+
   return (
     <View pointerEvents="none" style={styles.introOverlay}>
-      <Animated.View style={[styles.introBackdrop, { opacity: backdropOpacity }]} />
-      <Animated.View style={[styles.introGlow, { opacity: backdropOpacity }]} />
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: backdropOpacity }]}>
+        <LinearGradient
+          colors={['#2c2521', '#1f1a17', '#171310']}
+          locations={[0, 0.6, 1]}
+          start={{ x: 0.15, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+      <Animated.View style={[styles.introGlow, { opacity: Animated.multiply(glowOpacity, backdropOpacity) }]} />
       <Animated.View
         style={[
           styles.introRoot,
@@ -258,7 +305,10 @@ function IntroScreen({ onDone }) {
           <Animated.View
             style={[
               styles.introLogo,
-              { opacity: logoOpacity, transform: [{ scale: logoScale }, { translateY: idleBob }] },
+              {
+                opacity: logoOpacity,
+                transform: [{ translateY: idleBob }, { scale: logoScale }, { rotate: logoRotateDeg }],
+              },
             ]}
           >
             <BrandMark size={introLogoSize} />
@@ -1246,7 +1296,11 @@ function OnboardingScreen({ profile, onComplete, onBack, editing = false, allAtO
           >
             {photos.map((photo, index) => (
               <PhotoSlot
-                key={photo?.id || `empty-${index}`}
+                // Key by fixed grid position, NOT photo id: these are positional
+                // slots, so a reorder should just swap each slot's `photo` prop.
+                // Keying by photo id made React relocate whole slot instances
+                // (each with its own drag state), which broke the reorder gesture.
+                key={index}
                 photo={photo}
                 index={index}
                 reorderMode={reorderMode}
@@ -2613,6 +2667,18 @@ function ChatMessageRow({ item, revealed, onToggleReveal }) {
   );
 }
 
+// Report reasons match the server enum (lib/types/safety REPORT_REASONS).
+const REPORT_REASONS = [
+  { key: 'harassment', label: 'Harassment' },
+  { key: 'spam', label: 'Spam' },
+  { key: 'fake_profile', label: 'Fake profile' },
+  { key: 'inappropriate_content', label: 'Inappropriate content' },
+  { key: 'underage', label: 'Underage' },
+  { key: 'hate_speech', label: 'Hate speech' },
+  { key: 'scam', label: 'Scam' },
+  { key: 'other', label: 'Other' },
+];
+
 function ChatRoomScreen({ match, onBack }) {
   const [messages, setMessages] = useState([]);
   const [otherUser, setOtherUser] = useState(match.profile || null);
@@ -2622,6 +2688,63 @@ function ChatRoomScreen({ match, onBack }) {
   const [error, setError] = useState('');
   // Tapping a message toggles its exact timestamp even mid-run, like iMessage.
   const [revealedId, setRevealedId] = useState(null);
+  // Safety: report + block (Apple App Store 1.2 requirement for UGC/dating).
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState('harassment');
+  const [reportDetails, setReportDetails] = useState('');
+  const [safetyBusy, setSafetyBusy] = useState(false);
+
+  async function submitReport() {
+    if (!otherUser?._id || reportDetails.trim().length < 5 || safetyBusy) return;
+    setSafetyBusy(true);
+    try {
+      await apiRequest('/api/report', {
+        method: 'POST',
+        body: {
+          reportedUserId: otherUser._id,
+          reason: reportReason,
+          details: reportDetails.trim(),
+          matchId: match._id,
+          conversationId: match._id,
+          autoBlock: true,
+        },
+      });
+      setReportOpen(false);
+      setReportDetails('');
+      Alert.alert('Report submitted', 'Thanks — our team will review this, and we’ve blocked this person for you.');
+      onBack();
+    } catch (err) {
+      Alert.alert('Could not submit report', err.message);
+    } finally {
+      setSafetyBusy(false);
+    }
+  }
+
+  function confirmBlock() {
+    Alert.alert(
+      `Block ${otherUser?.first_name || otherUser?.name || 'this person'}?`,
+      'You will no longer see each other or be able to message.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Block',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await apiRequest('/api/block', {
+                method: 'POST',
+                body: { blockedUserId: otherUser._id, reason: 'Blocked from chat.' },
+              });
+              onBack();
+            } catch (err) {
+              Alert.alert('Could not block', err.message);
+            }
+          },
+        },
+      ]
+    );
+  }
 
   async function load() {
     setLoading(true);
@@ -2673,7 +2796,12 @@ function ChatRoomScreen({ match, onBack }) {
         </View>
       )}
     >
-      <Header title={otherUser?.name || 'Chat'} subtitle="Accepted match" onBack={onBack} />
+      <Header
+        title={otherUser?.name || 'Chat'}
+        subtitle="Accepted match"
+        onBack={onBack}
+        right={<IconButton icon="ellipsis-horizontal" label="Safety options" onPress={() => setMenuOpen(true)} />}
+      />
       <ErrorBanner message={error} />
       {loading ? (
         <ActivityIndicator color={colors.black} />
@@ -2697,6 +2825,63 @@ function ChatRoomScreen({ match, onBack }) {
           }
         />
       )}
+
+      {/* Safety action sheet */}
+      <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
+        <Pressable style={styles.sheetBackdrop} onPress={() => setMenuOpen(false)}>
+          <Pressable style={styles.sheetCard} onPress={(e) => e.stopPropagation()}>
+            <Pressable
+              style={styles.sheetRow}
+              onPress={() => { setMenuOpen(false); setReportOpen(true); }}
+            >
+              <Ionicons name="flag" size={20} color={colors.text} />
+              <Text style={styles.sheetRowText}>Report {otherUser?.first_name || otherUser?.name || 'user'}</Text>
+            </Pressable>
+            <Pressable
+              style={styles.sheetRow}
+              onPress={() => { setMenuOpen(false); confirmBlock(); }}
+            >
+              <Ionicons name="ban" size={20} color={colors.red} />
+              <Text style={[styles.sheetRowText, { color: colors.red }]}>Block {otherUser?.first_name || otherUser?.name || 'user'}</Text>
+            </Pressable>
+            <Pressable style={[styles.sheetRow, styles.sheetCancel]} onPress={() => setMenuOpen(false)}>
+              <Text style={styles.sheetRowText}>Cancel</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Report modal */}
+      <Modal visible={reportOpen} transparent animationType="slide" onRequestClose={() => setReportOpen(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>Report {otherUser?.first_name || otherUser?.name || 'user'}</Text>
+            <Text style={styles.helpText}>Reports are private. This person won’t know who reported them, and we’ll block them for you.</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.replyChipRow}>
+              {REPORT_REASONS.map((r) => {
+                const active = reportReason === r.key;
+                return (
+                  <Pressable key={r.key} onPress={() => setReportReason(r.key)} style={[styles.replyChip, active && styles.replyChipActive]}>
+                    <Text style={[styles.replyChipText, active && styles.replyChipTextActive]}>{r.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+            <TextField
+              value={reportDetails}
+              onChangeText={setReportDetails}
+              placeholder="Share what happened (at least 5 characters)"
+              multiline
+            />
+            <View style={styles.actionRow}>
+              <Button style={styles.actionButton} variant="secondary" onPress={() => setReportOpen(false)}>Cancel</Button>
+              <Button style={styles.actionButton} onPress={submitReport} loading={safetyBusy} disabled={reportDetails.trim().length < 5}>
+                Submit report
+              </Button>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Screen>
   );
 }
@@ -2943,8 +3128,9 @@ function WingmanRankCard({ rank }) {
   );
 }
 
-function ProfileScreen({ profile, onRoute, onEdit, onFilters, onSignOut }) {
+function ProfileScreen({ profile, onRoute, onEdit, onFilters, onSignOut, onDeleted }) {
   const [rank, setRank] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -2953,6 +3139,31 @@ function ProfileScreen({ profile, onRoute, onEdit, onFilters, onSignOut }) {
       .catch(() => {});
     return () => { cancelled = true; };
   }, []);
+
+  // Apple App Store 5.1.1(v): an account created in-app must be deletable in-app.
+  function confirmDelete() {
+    Alert.alert(
+      'Delete your account?',
+      'This permanently erases your profile, matches, and messages. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              await apiRequest('/api/account', { method: 'DELETE' });
+              await onDeleted();
+            } catch (err) {
+              setDeleting(false);
+              Alert.alert('Could not delete account', err.message);
+            }
+          },
+        },
+      ]
+    );
+  }
 
   return (
     <Screen footer={<BottomTabs current="profile" onNavigate={onRoute} />}>
@@ -2971,6 +3182,9 @@ function ProfileScreen({ profile, onRoute, onEdit, onFilters, onSignOut }) {
       <Button onPress={onEdit}>Edit profile</Button>
       <View style={{ height: 12 }} />
       <Button variant="secondary" onPress={onSignOut}>Sign out</Button>
+      <Pressable onPress={confirmDelete} disabled={deleting} style={styles.deleteAccountRow}>
+        <Text style={styles.deleteAccountText}>{deleting ? 'Deleting…' : 'Delete my account'}</Text>
+      </Pressable>
     </Screen>
   );
 }
@@ -3028,6 +3242,14 @@ export default function App() {
 
   async function handleSignOut() {
     await logout();
+    setUser(null);
+    setProfile(null);
+    setRoute('auth');
+  }
+
+  // Account already deleted server-side; just drop the local session and reset.
+  async function handleAccountDeleted() {
+    await clearSession();
     setUser(null);
     setProfile(null);
     setRoute('auth');
@@ -3121,6 +3343,7 @@ export default function App() {
           onEdit={() => setRoute('editProfile')}
           onFilters={() => setRoute('datingFilters')}
           onSignOut={handleSignOut}
+          onDeleted={handleAccountDeleted}
         />
       );
     }
@@ -3160,19 +3383,15 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     zIndex: 100,
   },
-  introBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.charcoal,
-  },
   introGlow: {
     position: 'absolute',
-    top: '22%',
+    top: '30%',
     left: '50%',
-    marginLeft: -160,
-    width: 320,
-    height: 320,
-    borderRadius: 160,
-    backgroundColor: 'rgba(245,106,156,0.12)',
+    marginLeft: -170,
+    width: 340,
+    height: 300,
+    borderRadius: 170,
+    backgroundColor: 'rgba(255,255,255,0.16)',
   },
   introRoot: {
     flex: 1,
@@ -3180,8 +3399,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   introLogoWrap: {
-    width: 160,
-    height: 160,
+    width: 150,
+    height: 150,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -3189,44 +3408,44 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 150,
     height: 150,
-    borderRadius: 40,
+    borderRadius: 38,
     borderWidth: 3,
-    borderColor: 'rgba(255,255,255,0.85)',
+    borderColor: 'rgba(255,255,255,0.8)',
   },
   introSpark: {
     position: 'absolute',
   },
-  introSpark1: { top: 2, right: 16 },
-  introSpark2: { bottom: 14, left: 6 },
-  introSpark3: { top: 30, left: 22 },
+  introSpark1: { top: -6, right: 8 },
+  introSpark2: { bottom: 6, left: -2 },
+  introSpark3: { top: 20, left: 12 },
   introLogo: {
-    shadowColor: colors.pink,
-    shadowOpacity: 0.5,
-    shadowRadius: 26,
+    shadowColor: '#78281433',
+    shadowOpacity: 0.55,
+    shadowRadius: 30,
     shadowOffset: { width: 0, height: 16 },
     elevation: 8,
   },
   introTitle: {
-    marginTop: 16,
+    marginTop: 13,
     color: '#ffffff',
     fontSize: 40,
-    letterSpacing: -1.4,
+    letterSpacing: -1.2,
     fontFamily: fonts.displayExtraBold,
   },
   introTitleAccent: {
     color: colors.pinkLight,
   },
   introTagline: {
-    marginTop: 12,
+    marginTop: 8,
     color: '#c8bcae',
     fontSize: 10,
-    letterSpacing: 3,
+    letterSpacing: 2.4,
     textTransform: 'uppercase',
     fontFamily: fonts.mono,
   },
   introDots: {
     position: 'absolute',
-    bottom: 96,
+    bottom: 64,
     left: 0,
     right: 0,
     flexDirection: 'row',
@@ -4174,6 +4393,46 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
     backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  sheetBackdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    padding: 12,
+  },
+  sheetCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  sheetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  sheetRowText: {
+    color: colors.text,
+    fontSize: 16,
+    fontFamily: fonts.bodySemiBold,
+  },
+  sheetCancel: {
+    borderBottomWidth: 0,
+    justifyContent: 'center',
+  },
+  deleteAccountRow: {
+    marginTop: 20,
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  deleteAccountText: {
+    color: colors.red,
+    fontSize: 14,
+    fontFamily: fonts.bodySemiBold,
   },
   modalSheet: {
     backgroundColor: colors.surface,
