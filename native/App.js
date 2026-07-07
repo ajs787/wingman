@@ -2529,6 +2529,90 @@ function ChatListScreen({ onRoute, onOpenChat }) {
   );
 }
 
+// A new "run" starts when the sender changes or when more than this many
+// minutes pass since the previous message — mirrors Discord/iMessage grouping
+// so consecutive messages read as one thought without a timestamp on every line.
+const CHAT_RUN_GAP_MINUTES = 5;
+
+function chatDateLabel(date) {
+  const d = new Date(date);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (d.toDateString() === today.toDateString()) return 'Today';
+  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+}
+
+function chatTimeLabel(date) {
+  return new Date(date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+// Flattens messages into a render list of date dividers + message rows, each
+// row annotated with whether it starts a new visual "run" and whether a
+// timestamp shows by default (end of a run, or a real time gap to the next
+// message even from the same sender).
+function buildChatItems(messages) {
+  const items = [];
+  let lastDateKey = null;
+
+  messages.forEach((msg, i) => {
+    const dateKey = new Date(msg.createdAt).toDateString();
+    if (dateKey !== lastDateKey) {
+      items.push({ type: 'date', key: `date-${dateKey}`, label: chatDateLabel(msg.createdAt) });
+      lastDateKey = dateKey;
+    }
+
+    const prev = messages[i - 1];
+    const next = messages[i + 1];
+    const minutesSince = (a, b) => Math.abs(new Date(a).getTime() - new Date(b).getTime()) / 60000;
+
+    const groupStart =
+      !prev ||
+      prev.isMe !== msg.isMe ||
+      new Date(prev.createdAt).toDateString() !== dateKey ||
+      minutesSince(msg.createdAt, prev.createdAt) > CHAT_RUN_GAP_MINUTES;
+
+    const showTimestampDefault =
+      !next ||
+      next.isMe !== msg.isMe ||
+      new Date(next.createdAt).toDateString() !== dateKey ||
+      minutesSince(next.createdAt, msg.createdAt) > CHAT_RUN_GAP_MINUTES;
+
+    items.push({ type: 'message', key: msg._id, message: msg, groupStart, showTimestampDefault });
+  });
+
+  return items;
+}
+
+function ChatDateDivider({ label }) {
+  return (
+    <View style={styles.chatDateDivider}>
+      <Text style={styles.chatDateDividerText}>{label}</Text>
+    </View>
+  );
+}
+
+function ChatMessageRow({ item, revealed, onToggleReveal }) {
+  const { message: msg, groupStart, showTimestampDefault } = item;
+  const showTimestamp = showTimestampDefault || revealed;
+
+  return (
+    <Pressable
+      onPress={() => onToggleReveal(msg._id)}
+      style={[styles.chatMessageRow, msg.isMe ? styles.chatMessageRowMe : styles.chatMessageRowThem, groupStart && styles.chatMessageRowGroupStart]}
+    >
+      <View style={[styles.messageBubble, msg.isMe ? styles.messageMe : styles.messageThem]}>
+        <Text style={[styles.messageText, msg.isMe && styles.messageTextMe]}>{msg.content}</Text>
+      </View>
+      {showTimestamp ? (
+        <Text style={[styles.chatTimestamp, msg.isMe && styles.chatTimestampMe]}>{chatTimeLabel(msg.createdAt)}</Text>
+      ) : null}
+    </Pressable>
+  );
+}
+
 function ChatRoomScreen({ match, onBack }) {
   const [messages, setMessages] = useState([]);
   const [otherUser, setOtherUser] = useState(match.profile || null);
@@ -2536,6 +2620,8 @@ function ChatRoomScreen({ match, onBack }) {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+  // Tapping a message toggles its exact timestamp even mid-run, like iMessage.
+  const [revealedId, setRevealedId] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -2573,6 +2659,8 @@ function ChatRoomScreen({ match, onBack }) {
     }
   }
 
+  const chatItems = useMemo(() => buildChatItems(messages), [messages]);
+
   return (
     <Screen
       scroll={false}
@@ -2591,14 +2679,20 @@ function ChatRoomScreen({ match, onBack }) {
         <ActivityIndicator color={colors.black} />
       ) : (
         <FlatList
-          data={messages}
-          keyExtractor={(item) => item._id}
+          data={chatItems}
+          keyExtractor={(item) => item.key}
           contentContainerStyle={styles.messages}
-          renderItem={({ item }) => (
-            <View style={[styles.messageBubble, item.isMe ? styles.messageMe : styles.messageThem]}>
-              <Text style={[styles.messageText, item.isMe && styles.messageTextMe]}>{item.content}</Text>
-            </View>
-          )}
+          renderItem={({ item }) =>
+            item.type === 'date' ? (
+              <ChatDateDivider label={item.label} />
+            ) : (
+              <ChatMessageRow
+                item={item}
+                revealed={revealedId === item.message._id}
+                onToggleReveal={(id) => setRevealedId((current) => (current === id ? null : id))}
+              />
+            )
+          }
         />
       )}
     </Screen>
@@ -4138,7 +4232,43 @@ const styles = StyleSheet.create({
   },
   messages: {
     paddingVertical: 12,
-    gap: 10,
+  },
+  chatDateDivider: {
+    alignItems: 'center',
+    marginTop: 18,
+    marginBottom: 10,
+  },
+  chatDateDividerText: {
+    color: colors.muted,
+    fontSize: 12,
+    fontFamily: fonts.bodySemiBold,
+    backgroundColor: colors.surfaceWarm,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+  chatMessageRow: {
+    marginTop: 2,
+  },
+  chatMessageRowMe: {
+    alignItems: 'flex-end',
+  },
+  chatMessageRowThem: {
+    alignItems: 'flex-start',
+  },
+  chatMessageRowGroupStart: {
+    marginTop: 12,
+  },
+  chatTimestamp: {
+    color: colors.muted,
+    fontSize: 11,
+    fontFamily: fonts.mono,
+    marginTop: 4,
+    marginHorizontal: 4,
+  },
+  chatTimestampMe: {
+    textAlign: 'right',
   },
   messageBubble: {
     maxWidth: '82%',
