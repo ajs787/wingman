@@ -15,10 +15,15 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.wingman.mobile"
+      "bundleIdentifier": "com.wingman.mobile",
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.wingman.mobile",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#E0447F"
@@ -31,7 +36,13 @@
     "plugins": [
       "expo-asset",
       "expo-font",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Wingman needs access to your photos so you can add them to your dating profile."
+        }
+      ]
     ],
     "extra": {
       "apiBaseUrl": "https://www.wingman33.com"
