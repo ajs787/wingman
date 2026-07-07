@@ -48,6 +48,8 @@ export default function ChatPage() {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  // Tapping a message toggles its exact timestamp even mid-run, like iMessage.
+  const [revealedId, setRevealedId] = useState(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState('harassment');
   const [reportDetails, setReportDetails] = useState('');
@@ -226,6 +228,13 @@ export default function ChatPage() {
     return groups;
   }, {});
 
+  // A new visual "run" starts when the sender changes or when more than this
+  // many minutes pass since the previous message — mirrors Discord/iMessage
+  // grouping so consecutive messages read as one thought without a timestamp
+  // on every line, but still surface elapsed time when there's a real gap.
+  const CHAT_RUN_GAP_MINUTES = 5;
+  const minutesBetween = (a, b) => Math.abs(new Date(a).getTime() - new Date(b).getTime()) / 60000;
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -319,15 +328,23 @@ export default function ChatPage() {
                 </div>
 
                 {/* Messages for this date */}
-                <div className="space-y-2">
+                <div>
                   {dateMessages.map((msg, i) => {
-                    const showTime = i === dateMessages.length - 1 ||
-                      dateMessages[i + 1]?.isMe !== msg.isMe;
+                    const prev = dateMessages[i - 1];
+                    const next = dateMessages[i + 1];
+
+                    const groupStart =
+                      !prev || prev.isMe !== msg.isMe || minutesBetween(msg.createdAt, prev.createdAt) > CHAT_RUN_GAP_MINUTES;
+                    const showTimeDefault =
+                      !next || next.isMe !== msg.isMe || minutesBetween(next.createdAt, msg.createdAt) > CHAT_RUN_GAP_MINUTES;
+                    const showTime = showTimeDefault || revealedId === msg._id;
 
                     return (
-                      <div
+                      <button
+                        type="button"
                         key={msg._id}
-                        className={`flex flex-col ${msg.isMe ? 'items-end' : 'items-start'}`}
+                        onClick={() => setRevealedId((current) => (current === msg._id ? null : msg._id))}
+                        className={`flex flex-col w-full text-left ${msg.isMe ? 'items-end' : 'items-start'} ${groupStart ? 'mt-3' : 'mt-0.5'}`}
                       >
                         <div
                           className={`max-w-[75%] px-4 py-2.5 rounded-2xl ${
@@ -341,11 +358,11 @@ export default function ChatPage() {
                           </p>
                         </div>
                         {showTime && (
-                          <p className="text-xs mt-1 px-1 text-slate-400">
+                          <p className="text-xs mt-1 px-1 text-slate-400 font-mono">
                             {formatTime(msg.createdAt)}
                           </p>
                         )}
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
