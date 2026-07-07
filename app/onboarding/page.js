@@ -173,6 +173,15 @@ export default function OnboardingPage() {
     return promptSelections.every((p) => p.prompt && p.answer.trim().length > 0);
   }
 
+  // A disabled Next button with no explanation is a dead end for the user —
+  // surface exactly what's missing instead of leaving them to guess.
+  function stepBlockedReason() {
+    if (step === 1 && !canProceedStep1()) return 'Add your name, school, major, year, and who you’re looking for.';
+    if (step === 3 && !canProceedStep3()) return 'Add all 5 photos to continue.';
+    if (step === 4 && !canProceedStep4()) return 'Answer all your prompts to continue.';
+    return null;
+  }
+
   function handlePhotoUpload(index, file) {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -691,29 +700,34 @@ export default function OnboardingPage() {
       </div>
 
       {/* Navigation */}
-      <div className="px-6 py-6 max-w-lg mx-auto w-full flex items-center justify-between border-t border-slate-100">
-        <Button variant="ghost" onClick={() => setStep((s) => Math.max(1, s - 1))} disabled={step === 1} className="gap-2">
-          <ArrowLeft className="w-4 h-4" /> Back
-        </Button>
-
-        {step < TOTAL_STEPS ? (
-          <Button
-            onClick={() => setStep((s) => s + 1)}
-            disabled={
-              (step === 1 && !canProceedStep1()) ||
-              (step === 2 && !canProceedStep2()) ||
-              (step === 3 && !canProceedStep3()) ||
-              (step === 4 && !canProceedStep4())
-            }
-            className="gap-2"
-          >
-            Next <ArrowRight className="w-4 h-4" />
-          </Button>
-        ) : (
-          <Button onClick={handleFinish} disabled={saving} size="lg">
-            {saving ? 'Saving...' : 'Done — Start swiping!'}
-          </Button>
+      <div className="px-6 py-3 max-w-lg mx-auto w-full border-t border-slate-100">
+        {stepBlockedReason() && (
+          <p className="text-xs text-slate-400 text-center mb-2">{stepBlockedReason()}</p>
         )}
+        <div className="flex items-center justify-between">
+          <Button variant="ghost" onClick={() => setStep((s) => Math.max(1, s - 1))} disabled={step === 1} className="gap-2">
+            <ArrowLeft className="w-4 h-4" /> Back
+          </Button>
+
+          {step < TOTAL_STEPS ? (
+            <Button
+              onClick={() => setStep((s) => s + 1)}
+              disabled={
+                (step === 1 && !canProceedStep1()) ||
+                (step === 2 && !canProceedStep2()) ||
+                (step === 3 && !canProceedStep3()) ||
+                (step === 4 && !canProceedStep4())
+              }
+              className="gap-2"
+            >
+              Next <ArrowRight className="w-4 h-4" />
+            </Button>
+          ) : (
+            <Button onClick={handleFinish} disabled={saving} size="lg">
+              {saving ? 'Saving...' : 'Done — Start swiping!'}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Invite Code Modal */}

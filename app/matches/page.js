@@ -153,32 +153,29 @@ function MatchCard({ match, onAccept, onReject }) {
         </div>
       )}
 
-      {/* Matched by */}
-      {match.matchedBy?.name && (
-        <div className="px-5 py-4 border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-full overflow-hidden flex-shrink-0 bg-gray-600 flex items-center justify-center">
-              {match.matchedBy.photo ? (
-                <img src={match.matchedBy.photo} alt={match.matchedBy.name} className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-white text-xs font-bold">{match.matchedBy.name[0]}</span>
-              )}
-            </div>
-            <span className="text-xs text-slate-500">
-              Matched for you by <span className="font-semibold">{match.matchedBy.name}</span>
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Your wingmen's take: who accepted/rejected the like, who made the match */}
-      {(match.wingmen?.decisions?.length > 0 || match.wingmen?.sent?.length > 0 || match.wingmen?.matchedBy) && (
+      {/* Your wingmen's take: who made the match, who accepted/rejected, who sent
+          the like. Consolidated into one block (previously "Matched by" repeated
+          the same matchedBy name in its own separate box right above this). */}
+      {(match.wingmen?.decisions?.length > 0 || match.wingmen?.sent?.length > 0 || match.wingmen?.matchedBy || match.matchedBy?.name) && (
         <div className="px-5 py-4 border-b border-slate-100 space-y-2">
           <p className="text-xs text-slate-500 font-medium">Your wingmen&apos;s take:</p>
-          {match.wingmen?.matchedBy?.name && (
-            <p className="text-xs text-slate-600">
-              <span className="font-semibold text-[#e0447f]">{match.wingmen.matchedBy.name}</span> made this match for you
-            </p>
+          {(match.wingmen?.matchedBy?.name || match.matchedBy?.name) && (
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full overflow-hidden flex-shrink-0 bg-gray-600 flex items-center justify-center">
+                {(match.wingmen?.matchedBy?.photo || match.matchedBy?.photo) ? (
+                  <img
+                    src={match.wingmen?.matchedBy?.photo || match.matchedBy?.photo}
+                    alt={match.wingmen?.matchedBy?.name || match.matchedBy?.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-white text-xs font-bold">{(match.wingmen?.matchedBy?.name || match.matchedBy?.name)[0]}</span>
+                )}
+              </div>
+              <p className="text-xs text-slate-600">
+                <span className="font-semibold text-[#e0447f]">{match.wingmen?.matchedBy?.name || match.matchedBy?.name}</span> made this match for you
+              </p>
+            </div>
           )}
           {match.wingmen?.decisions?.length > 0 && (
             <div className="flex flex-wrap gap-1.5">

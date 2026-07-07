@@ -173,7 +173,66 @@ export default function FeedPage() {
           )}
         </section>
 
-        {/* My wingman rank */}
+        {/* Who to swipe for */}
+        <section className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="w-4 h-4 text-orange-500" />
+            <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Swipe for a friend</h2>
+          </div>
+
+          {loading ? (
+            <div className="space-y-3">
+              {[1, 2].map((i) => (
+                <div key={i} className="h-20 rounded-2xl bg-slate-100 animate-pulse" />
+              ))}
+            </div>
+          ) : friends.length === 0 ? (
+            <div className="text-center py-12 rounded-[1.5rem] bg-amber-50/70 border border-dashed border-amber-200">
+              <Heart className="w-8 h-8 text-orange-300 mx-auto mb-3" />
+              <p className="text-slate-500 font-medium">No friends added yet</p>
+              <p className="text-slate-400 text-sm mt-1 mb-4">Enter a friend&apos;s invite code to get started</p>
+              <p className="text-slate-400 text-xs mb-4">Basic version: up to {BASIC_MAX_ACTIVE_DELEGATIONS} friends at a time.</p>
+              <Link href="/delegate">
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Plus className="w-4 h-4" /> Enter invite code
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {friends.map((friend) => (
+                <button
+                  key={friend._id}
+                  onClick={() => router.push(`/feed/${friend._id}`)}
+                  className="w-full flex items-center justify-between p-4 rounded-[1.5rem] border border-black/5 bg-background hover:border-orange-200 hover:bg-amber-50/60 transition-all group shadow-[0_14px_40px_-28px_rgba(119,77,24,0.25)]"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-600 flex-shrink-0">
+                      {friend.photos?.[0]?.url ? (
+                        <img src={friend.photos[0].url} alt={friend.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-white font-bold text-lg">
+                          {friend.name?.[0]?.toUpperCase() || '?'}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-left">
+                      <p className="font-display font-bold text-slate-800">{friend.name}</p>
+                      <p className="text-xs text-slate-400">
+                        {friend.school || friend.year} · {friend.majors?.join(', ') || friend.major}
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-gray-600 transition-colors" />
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* My wingman rank: gamification/social-proof content, kept below the
+            primary "who to swipe for" action so returning users reach the core
+            task immediately instead of scrolling past a leaderboard first. */}
         {myRank && (
           <section className="mb-8">
             <div className="flex items-center gap-2 mb-4">
@@ -238,63 +297,6 @@ export default function FeedPage() {
             )}
           </section>
         )}
-
-        {/* Who to swipe for */}
-        <section className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <Users className="w-4 h-4 text-orange-500" />
-            <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Swipe for a friend</h2>
-          </div>
-
-          {loading ? (
-            <div className="space-y-3">
-              {[1, 2].map((i) => (
-                <div key={i} className="h-20 rounded-2xl bg-slate-100 animate-pulse" />
-              ))}
-            </div>
-          ) : friends.length === 0 ? (
-            <div className="text-center py-12 rounded-[1.5rem] bg-amber-50/70 border border-dashed border-amber-200">
-              <Heart className="w-8 h-8 text-orange-300 mx-auto mb-3" />
-              <p className="text-slate-500 font-medium">No friends added yet</p>
-              <p className="text-slate-400 text-sm mt-1 mb-4">Enter a friend&apos;s invite code to get started</p>
-              <p className="text-slate-400 text-xs mb-4">Basic version: up to {BASIC_MAX_ACTIVE_DELEGATIONS} friends at a time.</p>
-              <Link href="/delegate">
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Plus className="w-4 h-4" /> Enter invite code
-                </Button>
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {friends.map((friend) => (
-                <button
-                  key={friend._id}
-                  onClick={() => router.push(`/feed/${friend._id}`)}
-                  className="w-full flex items-center justify-between p-4 rounded-[1.5rem] border border-black/5 bg-background hover:border-orange-200 hover:bg-amber-50/60 transition-all group shadow-[0_14px_40px_-28px_rgba(119,77,24,0.25)]"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-600 flex-shrink-0">
-                      {friend.photos?.[0]?.url ? (
-                        <img src={friend.photos[0].url} alt={friend.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-white font-bold text-lg">
-                          {friend.name?.[0]?.toUpperCase() || '?'}
-                        </div>
-                      )}
-                    </div>
-                    <div className="text-left">
-                      <p className="font-display font-bold text-slate-800">{friend.name}</p>
-                      <p className="text-xs text-slate-400">
-                        {friend.school || friend.year} · {friend.majors?.join(', ') || friend.major}
-                      </p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-gray-600 transition-colors" />
-                </button>
-              ))}
-            </div>
-          )}
-        </section>
 
         {/* CTA to enter code */}
         <Link href="/delegate">

@@ -1312,7 +1312,7 @@ function OnboardingScreen({ profile, onComplete, onBack, editing = false, allAtO
           </Button>
         )}
       </View>
-      <Button variant="secondary" onPress={openPreview} disabled={!requiredComplete}>
+      <Button variant="secondary" onPress={openPreview}>
         Preview profile
       </Button>
       <ProfilePreviewModal
@@ -1666,7 +1666,7 @@ function SwipeScreen({ owner, onBack }) {
   return (
     <Screen scroll={false} padded={false}>
       <View style={styles.swipeShell}>
-        <Header title={`For ${owner.name}`} subtitle="Swipe as their wingman" onBack={onBack} />
+        <Header title={`For ${owner.name}`} subtitle="Likes go to their wingmen for a final yes" onBack={onBack} />
         <View style={styles.feedTabs}>
           {[
             { key: 'feed', label: 'Feed', icon: 'albums' },
@@ -2126,21 +2126,21 @@ function IncomingLikeCard({ row, ownerName, onAccept, onReject, onThread }) {
         </View>
       ) : null}
 
-      <View style={styles.actionRow}>
-        <Button style={styles.actionButton} variant="secondary" onPress={onThread}>Ask their wingmen</Button>
-        {accepted ? (
-          <Button style={styles.actionButton} disabled>Matched ✓</Button>
-        ) : (
-          <>
-            <Button style={styles.actionButton} variant="secondary" onPress={onReject} disabled={row.myDecision === 'reject'}>
-              {row.myDecision === 'reject' ? 'Passed' : 'Pass'}
-            </Button>
-            <Button style={styles.actionButton} onPress={onAccept}>
-              {decided && row.myDecision === 'accept' ? 'Accepted' : 'Match them'}
-            </Button>
-          </>
-        )}
-      </View>
+      {/* The decision (Pass/Match) is the primary, same-weight binary choice.
+          "Ask their wingmen" is a distinct kind of action (conversation, not a
+          decision), so it's demoted to a ghost link below rather than competing
+          for attention as a third equal-weight button. */}
+      {!accepted ? (
+        <View style={styles.actionRow}>
+          <Button style={styles.actionButton} variant="secondary" onPress={onReject} disabled={row.myDecision === 'reject'}>
+            {row.myDecision === 'reject' ? 'Passed' : 'Pass'}
+          </Button>
+          <Button style={styles.actionButton} onPress={onAccept}>
+            {decided && row.myDecision === 'accept' ? 'Accepted' : 'Match them'}
+          </Button>
+        </View>
+      ) : null}
+      <Button variant="ghost" onPress={onThread}>Ask their wingmen about them</Button>
     </Card>
   );
 }
@@ -2669,7 +2669,7 @@ function ChatRoomScreen({ match, onBack }) {
           <View style={{ flex: 1 }}>
             <TextField value={content} onChangeText={setContent} placeholder="Message..." />
           </View>
-          <IconButton icon="send" label="Send" tone="dark" onPress={send} disabled={sending} />
+          <IconButton icon="send" label="Send" tone="dark" onPress={send} disabled={sending || !content.trim()} />
         </View>
       )}
     >
@@ -2677,6 +2677,8 @@ function ChatRoomScreen({ match, onBack }) {
       <ErrorBanner message={error} />
       {loading ? (
         <ActivityIndicator color={colors.black} />
+      ) : chatItems.length === 0 ? (
+        <EmptyState icon="chatbubble-ellipses" title="No messages yet" body={`Say hey to ${otherUser?.first_name || otherUser?.name || 'them'} to start the conversation!`} />
       ) : (
         <FlatList
           data={chatItems}
