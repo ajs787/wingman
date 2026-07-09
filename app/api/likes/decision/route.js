@@ -93,7 +93,10 @@ export async function POST(request) {
     pm.status = everyoneRejected ? 'rejected' : 'pending';
   }
 
-  // On the first accept, create the pending Match the two users will confirm.
+  // On the first accept, create the Match. Both sides have now expressed interest
+  // (the owner's wingman sent the like; the target's wingman just accepted it), so
+  // it's a real match immediately — both statuses are 'accepted' and chat is open.
+  // No separate per-user confirmation step.
   let matchId = pm.match_id ? pm.match_id.toString() : null;
   if (pm.status === 'accepted' && !pm.match_id) {
     const [a, b] = ownerId < targetId ? [ownerId, targetId] : [targetId, ownerId];
@@ -110,8 +113,8 @@ export async function POST(request) {
           $setOnInsert: {
             user_a: new mongoose.Types.ObjectId(a),
             user_b: new mongoose.Types.ObjectId(b),
-            user_a_status: 'pending',
-            user_b_status: 'pending',
+            user_a_status: 'accepted',
+            user_b_status: 'accepted',
             // Owner side note+wingman come from the like; target side is the accepting wingman.
             user_a_friend_note: ownerIsA ? ownerNote : null,
             user_b_friend_note: ownerIsA ? null : ownerNote,
@@ -140,7 +143,7 @@ export async function POST(request) {
     status: pm.status,
     myDecision: action,
     matchId,
-    // A match now exists as pending — the two actual users confirm it next.
+    // A real, chat-ready match now exists for both users.
     matchCreated: pm.status === 'accepted' && !!matchId,
   });
 }

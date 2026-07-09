@@ -1818,7 +1818,7 @@ function SwipeScreen({ owner, onBack }) {
           visible={!!matchInfo}
           owner={owner}
           candidate={matchInfo?.candidate}
-          subtitle={`You matched ${owner.first_name || owner.name || 'your friend'} with ${matchInfo?.candidate?.first_name || matchInfo?.candidate?.name || 'someone'} — it's in both of their matches to confirm.`}
+          subtitle={`You matched ${owner.first_name || owner.name || 'your friend'} with ${matchInfo?.candidate?.first_name || matchInfo?.candidate?.name || 'someone'} — they can start chatting now.`}
           onClose={() => setMatchInfo(null)}
         />
         <WingmanThreadModal
@@ -1948,10 +1948,9 @@ function SwipeDeck({ candidates, index, onCommit }) {
           }
         },
         onPanResponderRelease: (e, g) => {
-          if (Math.abs(g.dx) < 6 && Math.abs(g.dy) < 6) {
-            setDetailOpen(true);
-            return;
-          }
+          // A pure tap is handled by the Pressable wrapping the card (opens the
+          // full profile); the pan responder only claims the gesture once the
+          // finger moves >6px, so here we only need to resolve real drags.
           if (g.dx > SWIPE_THRESHOLD || g.vx > 0.7) forceSwipe('right');
           else if (g.dx < -SWIPE_THRESHOLD || g.vx < -0.7) forceSwipe('left');
           else {
@@ -1978,7 +1977,9 @@ function SwipeDeck({ candidates, index, onCommit }) {
           style={[styles.deckCard, { transform: [{ translateX: pan.x }, { translateY: pan.y }, { rotate }] }]}
           {...panResponder.panHandlers}
         >
-          <DeckCardFace candidate={current} />
+          <Pressable style={styles.deckCardPressable} onPress={() => setDetailOpen(true)}>
+            <DeckCardFace candidate={current} />
+          </Pressable>
           <Animated.View style={[styles.stamp, styles.stampLike, { opacity: likeOpacity }]} pointerEvents="none">
             <Text style={styles.stampTextLike}>LIKE</Text>
           </Animated.View>
@@ -2354,7 +2355,6 @@ function MatchesScreen({ profile, onRoute, onOpenChat, setPendingMatches }) {
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [celebrate, setCelebrate] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -2363,7 +2363,8 @@ function MatchesScreen({ profile, onRoute, onOpenChat, setPendingMatches }) {
       const data = await apiRequest(`/api/matches?ownerId=${profile._id}`);
       const rows = data.matches || [];
       setMatches(rows);
-      setPendingMatches(rows.filter((match) => match.myStatus === 'pending').length);
+      // Matches are live the moment both sides' wingmen say yes — nothing pending.
+      setPendingMatches(0);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -2375,77 +2376,33 @@ function MatchesScreen({ profile, onRoute, onOpenChat, setPendingMatches }) {
     if (profile?._id) load();
   }, [profile?._id]);
 
-  async function act(match, action) {
-    try {
-      const data = await apiRequest('/api/matches/action', {
-        method: 'POST',
-        body: { match_id: match._id, action },
-      });
-      setMatches((prev) => prev.map((item) => (
-        item._id === match._id
-          ? { ...item, myStatus: data.status, canChat: data.canChat }
-          : item
-      )));
-      // The real celebration moment: both actual users have now said yes.
-      if (action === 'accept' && data.canChat) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-        setCelebrate({ ...match, canChat: true });
-      }
-    } catch (err) {
-      Alert.alert('Match update failed', err.message);
-    }
-  }
-
   return (
-    <Screen footer={<BottomTabs current="matches" onNavigate={onRoute} pending={matches.filter((m) => m.myStatus === 'pending').length} />}>
-      <Header title="Matches" subtitle="Review matches your friends made." />
+    <Screen footer={<BottomTabs current="matches" onNavigate={onRoute} />}>
+      <Header title="Matches" subtitle="Everyone your wingmen matched you with." />
       <ErrorBanner message={error} />
       {loading ? <ActivityIndicator color={colors.black} /> : null}
       {!loading && matches.length === 0 ? (
-        <EmptyState icon="heart" title="No matches yet" body="When a wingman on each side says yes, the match lands here for you to confirm." />
+        <EmptyState icon="heart" title="No matches yet" body="When a wingman on each side says yes, you’re matched and it lands right here." />
       ) : null}
       {matches.map((match) => (
         <MatchCard
           key={match._id}
           match={match}
-          onAccept={() => act(match, 'accept')}
-          onReject={() => act(match, 'reject')}
           onChat={() => onOpenChat(match)}
         />
       ))}
-      <MatchCelebration
-        visible={!!celebrate}
-        owner={profile}
-        candidate={celebrate?.profile}
-        eyebrow="your wingmen came through"
-        subtitle={`You and ${celebrate?.profile?.first_name || celebrate?.profile?.name || 'your match'} both said yes — go say hi!`}
-        cta="Start chatting"
-        onClose={() => {
-          const match = celebrate;
-          setCelebrate(null);
-          if (match) onOpenChat(match);
-        }}
-      />
     </Screen>
   );
 }
 
-function MatchCard({ match, onAccept, onReject, onChat }) {
+function MatchCard({ match, onChat }) {
   const person = match.profile || {};
   const photo = imageUrl(person.photos?.[0]?.url);
-  const pending = match.myStatus === 'pending';
-  const accepted = match.myStatus === 'accepted';
-  const rejected = match.myStatus === 'rejected';
   const matchedByList = match.matchedByList?.length
     ? match.matchedByList
     : match.matchedBy
       ? [match.matchedBy]
       : [];
-  // Per-wingman transparency: who on MY side sent/accepted/rejected this match.
-  const wingmen = match.wingmen || {};
-  const myCrewDecisions = wingmen.decisions || [];
-  const myCrewSent = wingmen.sent || [];
-  const crewMatchedBy = wingmen.matchedBy;
 
   return (
     <Card style={styles.matchCard}>
@@ -2454,9 +2411,7 @@ function MatchCard({ match, onAccept, onReject, onChat }) {
         <View style={{ flex: 1 }}>
           <Text style={styles.cardTitle}>{person.name || 'Unknown'}{person.age ? `, ${person.age}` : ''}</Text>
           <Text style={styles.mutedText}>{person.school || person.year || 'Profile'} · {person.majors?.join(', ') || person.major || '-'}</Text>
-          <Text style={styles.statusText}>
-            {match.canChat ? 'Ready to chat' : accepted ? 'Waiting for them' : rejected ? 'Rejected' : 'Needs your answer'}
-          </Text>
+          <Text style={styles.statusText}>You&rsquo;re matched · ready to chat</Text>
         </View>
       </View>
       {match.friendNote ? (
@@ -2483,52 +2438,7 @@ function MatchCard({ match, onAccept, onReject, onChat }) {
           </View>
         </View>
       ) : null}
-      {myCrewDecisions.length > 0 || myCrewSent.length > 0 || crewMatchedBy ? (
-        <View style={styles.friendNote}>
-          <Text style={styles.sectionLabel}>Your wingmen’s take</Text>
-          {crewMatchedBy ? (
-            <View style={styles.swiperRow}>
-              <Avatar uri={imageUrl(crewMatchedBy.photo)} name={crewMatchedBy.name} size={34} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.swiperName}>{crewMatchedBy.name || 'A wingman'}</Text>
-                <Text style={styles.swiperNote}>made this match for you</Text>
-              </View>
-              <Ionicons name="heart" size={16} color={colors.pink} />
-            </View>
-          ) : null}
-          {myCrewDecisions.length > 0 ? (
-            <View style={styles.decisionRow}>
-              {myCrewDecisions.map((d, i) => (
-                <View key={`${d.wingman?._id || 'd'}-${i}`} style={[styles.decisionPill, d.decision === 'accept' ? styles.decisionPillAccept : styles.decisionPillReject]}>
-                  <Ionicons name={d.decision === 'accept' ? 'checkmark' : 'close'} size={12} color="#fff" />
-                  <Text style={styles.decisionPillText}>{d.wingman?.name?.split(' ')[0] || 'Wingman'}</Text>
-                </View>
-              ))}
-            </View>
-          ) : null}
-          {myCrewSent.length > 0 ? (
-            <View style={styles.swiperList}>
-              {myCrewSent.map((s, i) => (
-                <View key={`${s.wingman?._id || 's'}-${i}`} style={styles.swiperRow}>
-                  <Avatar uri={imageUrl(s.wingman?.photo)} name={s.wingman?.name} size={34} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.swiperName}>{s.wingman?.name || 'A wingman'} sent the like</Text>
-                    {s.comment ? <Text style={styles.swiperNote} numberOfLines={2}>{s.comment}</Text> : null}
-                  </View>
-                </View>
-              ))}
-            </View>
-          ) : null}
-        </View>
-      ) : null}
-      {pending ? (
-        <View style={styles.actionRow}>
-          <Button style={styles.actionButton} variant="secondary" onPress={onReject}>Pass</Button>
-          <Button style={styles.actionButton} onPress={onAccept}>Accept</Button>
-        </View>
-      ) : match.canChat ? (
-        <Button onPress={onChat}>Message {person.first_name || person.name}</Button>
-      ) : null}
+      <Button onPress={onChat}>Message {person.first_name || person.name}</Button>
     </Card>
   );
 }
@@ -4047,6 +3957,9 @@ const styles = StyleSheet.create({
     ...shadow,
     shadowOpacity: 0.18,
     shadowRadius: 24,
+  },
+  deckCardPressable: {
+    flex: 1,
   },
   cardFace: {
     flex: 1,

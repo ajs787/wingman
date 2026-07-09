@@ -304,7 +304,7 @@ export default function IncomingLikesPage() {
       if (action === 'accept' && data.matchCreated) {
         toast({
           title: "You made a match! 💘",
-          description: `${row.candidate?.name || 'They'} and ${ownerName} are matched — it's in both of their matches to confirm.`,
+          description: `${row.candidate?.name || 'They'} and ${ownerName} are matched — they can start chatting now.`,
         });
       }
     } catch {
