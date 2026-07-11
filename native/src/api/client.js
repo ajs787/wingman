@@ -237,19 +237,33 @@ export async function login(email, password) {
   return user;
 }
 
-export async function signup(email, password) {
+// Sign up with email + password + phone. The account isn't usable until the
+// phone is verified via verifyPhoneOtp — this returns the phone to verify.
+export async function signup(email, password, phoneNumber) {
   const data = await apiRequest('/api/auth/signup', {
     method: 'POST',
-    body: { email, password },
+    body: { email, password, phone_number: phoneNumber },
   });
-  if (data.requiresEmailVerification) {
-    return {
-      requiresEmailVerification: true,
-      email: data.email,
-      devVerificationCode: data.devVerificationCode,
-    };
-  }
+  return {
+    requiresPhoneVerification: true,
+    phone_number: data.phone_number,
+    devOtp: data.devOtp,
+  };
+}
 
+export async function requestPhoneOtp(phoneNumber) {
+  return apiRequest('/api/auth/phone/request-otp', {
+    method: 'POST',
+    body: { phone_number: phoneNumber },
+  });
+}
+
+// Verify the phone OTP; on success the account is active and the session is stored.
+export async function verifyPhoneOtp(phoneNumber, otp) {
+  const data = await apiRequest('/api/auth/phone/verify-otp', {
+    method: 'POST',
+    body: { phone_number: phoneNumber, otp },
+  });
   const user = {
     userId: data.userId,
     email: data.email,
@@ -259,29 +273,6 @@ export async function signup(email, password) {
   await persistSessionToken(data);
   await saveStoredUser(user);
   return user;
-}
-
-export async function verifyEmail(email, code) {
-  const data = await apiRequest('/api/auth/email/verify', {
-    method: 'POST',
-    body: { email, code },
-  });
-  const user = {
-    userId: data.userId,
-    email: data.email,
-    netid: data.netid,
-    hasProfile: data.hasProfile,
-  };
-  await persistSessionToken(data);
-  await saveStoredUser(user);
-  return user;
-}
-
-export async function resendEmailVerification(email) {
-  return apiRequest('/api/auth/email/resend', {
-    method: 'POST',
-    body: { email },
-  });
 }
 
 export async function logout() {
