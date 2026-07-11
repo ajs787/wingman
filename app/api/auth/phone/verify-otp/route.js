@@ -78,22 +78,17 @@ export async function POST(request) {
       );
     }
 
-    let user = await User.findOne({ phone_number: fullPhone });
-
+    // The account is created at signup (email + password + phone). Verifying the
+    // OTP activates it. No auto-created phone-only accounts.
+    const user = await User.findOne({ phone_number: fullPhone });
     if (!user) {
-      const normalized = fullPhone.slice(-10);
-      const netid = `phone_${normalized}`;
-      user = await User.create({
-        netid,
-        email: `${netid}@wingman.local`,
-        email_verified: true,
-        email_verified_at: new Date(),
-        phone_number: fullPhone,
-        phone_verified: true,
-        phone_verified_at: new Date(),
-        password_hash: null, // Phone auth only
-      });
-    } else if (!user.phone_verified) {
+      await OTP.deleteOne({ _id: otpRecord._id });
+      return NextResponse.json(
+        { error: 'No account found for this phone number. Please sign up first.' },
+        { status: 404 }
+      );
+    }
+    if (!user.phone_verified) {
       user.phone_verified = true;
       user.phone_verified_at = new Date();
       await user.save();

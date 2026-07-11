@@ -33,9 +33,9 @@ import {
   login,
   logout,
   photoFormFile,
-  resendEmailVerification,
+  requestPhoneOtp,
   signup,
-  verifyEmail,
+  verifyPhoneOtp,
 } from './src/api/client';
 import {
   Avatar,
@@ -340,20 +340,24 @@ function AuthScreen({ onAuthed }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
-  const [verificationEmail, setVerificationEmail] = useState('');
-  const [verificationCode, setVerificationCode] = useState('');
+  const [phone, setPhone] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [confirmVisible, setConfirmVisible] = useState(false);
+  // Phone-verification step: after signup, or after logging in to an account
+  // whose phone isn't verified yet.
+  const [verifyPhone, setVerifyPhone] = useState('');
+  const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
   const isSignup = mode === 'signup';
-  const needsVerification = !!verificationEmail;
+  const needsVerification = !!verifyPhone;
 
   async function submit() {
     setError('');
+    setNotice('');
     if (!email.trim() || !password) {
       setError('Email and password are required.');
       return;
@@ -362,23 +366,29 @@ function AuthScreen({ onAuthed }) {
       setError('Passwords do not match.');
       return;
     }
+    if (isSignup && !phone.trim()) {
+      setError('A phone number is required.');
+      return;
+    }
 
     setLoading(true);
     try {
-      const user = isSignup
-        ? await signup(email.trim().toLowerCase(), password)
-        : await login(email.trim().toLowerCase(), password);
-      if (user.requiresEmailVerification) {
-        setVerificationEmail(user.email);
-        setVerificationCode(user.devVerificationCode || '');
-        setNotice('Enter the 6-digit code we sent to your school email.');
-        return;
+      if (isSignup) {
+        const res = await signup(email.trim().toLowerCase(), password, phone.trim());
+        setVerifyPhone(res.phone_number || phone.trim());
+        if (res.devOtp) { setOtp(res.devOtp); setNotice(`Dev code: ${res.devOtp}`); }
+      } else {
+        const user = await login(email.trim().toLowerCase(), password);
+        await onAuthed(user);
       }
-      await onAuthed(user);
     } catch (err) {
-      if (err.data?.code === 'EMAIL_NOT_VERIFIED') {
-        setVerificationEmail(err.data.email || email.trim().toLowerCase());
-        setNotice('Verify your email before logging in.');
+      if (err.data?.code === 'PHONE_NOT_VERIFIED') {
+        const ph = err.data.phone_number || '';
+        setVerifyPhone(ph);
+        try {
+          const data = await requestPhoneOtp(ph);
+          if (data.devOtp) { setOtp(data.devOtp); setNotice(`Dev code: ${data.devOtp}`); }
+        } catch {}
       } else {
         setError(err.message);
       }
@@ -390,14 +400,13 @@ function AuthScreen({ onAuthed }) {
   async function submitVerification() {
     setError('');
     setNotice('');
-    if (verificationCode.trim().length !== 6) {
+    if (otp.trim().length !== 6) {
       setError('Enter the 6-digit verification code.');
       return;
     }
-
     setLoading(true);
     try {
-      const user = await verifyEmail(verificationEmail, verificationCode.trim());
+      const user = await verifyPhoneOtp(verifyPhone, otp.trim());
       await onAuthed(user);
     } catch (err) {
       setError(err.message);
@@ -411,9 +420,9 @@ function AuthScreen({ onAuthed }) {
     setNotice('');
     setResending(true);
     try {
-      const data = await resendEmailVerification(verificationEmail);
-      if (data.devVerificationCode) setVerificationCode(data.devVerificationCode);
-      setNotice(data.alreadyVerified ? 'Email is already verified. Try logging in.' : 'A new code was sent.');
+      const data = await requestPhoneOtp(verifyPhone);
+      if (data.devOtp) { setOtp(data.devOtp); setNotice(`Dev code: ${data.devOtp}`); }
+      else setNotice('A new code was sent to your phone.');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -428,19 +437,19 @@ function AuthScreen({ onAuthed }) {
           <View style={styles.authHero}>
             <BrandMark size={66} />
             <Text style={[styles.appName, styles.appNameStacked]}>wing<Text style={styles.appNameAccent}>man</Text></Text>
-            <Text style={styles.brandTagline}>verify your school email</Text>
+            <Text style={styles.brandTagline}>verify your phone</Text>
           </View>
 
           <Card style={styles.authCard}>
             <View style={styles.sectionTitleRow}>
-              <Ionicons name="mail" size={20} color={colors.amber} />
-              <Text style={styles.sectionTitleNoMargin}>Check your inbox</Text>
+              <Ionicons name="chatbox-ellipses" size={20} color={colors.amber} />
+              <Text style={styles.sectionTitleNoMargin}>Enter your code</Text>
             </View>
-            <Text style={styles.helpText}>We sent a 6-digit code to {verificationEmail}.</Text>
+            <Text style={styles.helpText}>We texted a 6-digit code to {verifyPhone}.</Text>
             <TextField
               label="Verification code"
-              value={verificationCode}
-              onChangeText={(value) => setVerificationCode(value.replace(/\D/g, '').slice(0, 6))}
+              value={otp}
+              onChangeText={(value) => setOtp(value.replace(/\D/g, '').slice(0, 6))}
               placeholder="000000"
               keyboardType="number-pad"
               autoCapitalize="none"
@@ -452,20 +461,20 @@ function AuthScreen({ onAuthed }) {
               </View>
             ) : null}
             <ErrorBanner message={error} />
-            <Button onPress={submitVerification} loading={loading}>Verify email</Button>
+            <Button onPress={submitVerification} loading={loading}>Verify &amp; continue</Button>
             <View style={{ height: 12 }} />
             <Button variant="secondary" onPress={resendVerification} loading={resending}>Resend code</Button>
             <View style={{ height: 12 }} />
             <Button
               variant="ghost"
               onPress={() => {
-                setVerificationEmail('');
-                setVerificationCode('');
+                setVerifyPhone('');
+                setOtp('');
                 setError('');
                 setNotice('');
               }}
             >
-              Back to login
+              Back
             </Button>
           </Card>
         </View>
@@ -485,13 +494,13 @@ function AuthScreen({ onAuthed }) {
         <Card style={styles.authCard}>
           <View style={styles.segment}>
             <Pressable
-              onPress={() => setMode('login')}
+              onPress={() => { setMode('login'); setError(''); }}
               style={[styles.segmentItem, !isSignup && styles.segmentItemActive]}
             >
               <Text style={[styles.segmentText, !isSignup && styles.segmentTextActive]}>Log in</Text>
             </Pressable>
             <Pressable
-              onPress={() => setMode('signup')}
+              onPress={() => { setMode('signup'); setError(''); }}
               style={[styles.segmentItem, isSignup && styles.segmentItemActive]}
             >
               <Text style={[styles.segmentText, isSignup && styles.segmentTextActive]}>Sign up</Text>
@@ -502,7 +511,7 @@ function AuthScreen({ onAuthed }) {
             label="Email"
             value={email}
             onChangeText={setEmail}
-            placeholder="you@school.edu"
+            placeholder="you@example.com"
             keyboardType="email-address"
             autoCapitalize="none"
           />
@@ -518,17 +527,28 @@ function AuthScreen({ onAuthed }) {
             onRightIconPress={() => setPasswordVisible((current) => !current)}
           />
           {isSignup ? (
-            <TextField
-              label="Confirm password"
-              value={confirm}
-              onChangeText={setConfirm}
-              placeholder="Confirm password"
-              secureTextEntry={!confirmVisible}
-              autoCapitalize="none"
-              rightIcon={confirmVisible ? 'eye-outline' : 'eye-off-outline'}
-              rightIconLabel={confirmVisible ? 'Hide password' : 'Show password'}
-              onRightIconPress={() => setConfirmVisible((current) => !current)}
-            />
+            <>
+              <TextField
+                label="Confirm password"
+                value={confirm}
+                onChangeText={setConfirm}
+                placeholder="Confirm password"
+                secureTextEntry={!confirmVisible}
+                autoCapitalize="none"
+                rightIcon={confirmVisible ? 'eye-outline' : 'eye-off-outline'}
+                rightIconLabel={confirmVisible ? 'Hide password' : 'Show password'}
+                onRightIconPress={() => setConfirmVisible((current) => !current)}
+              />
+              <TextField
+                label="Phone number"
+                value={phone}
+                onChangeText={setPhone}
+                placeholder="(555) 123-4567"
+                keyboardType="phone-pad"
+                autoCapitalize="none"
+              />
+              <Text style={styles.helpText}>US numbers only. We&rsquo;ll text a 6-digit code to verify it&rsquo;s you.</Text>
+            </>
           ) : null}
           <ErrorBanner message={error} />
           <Button onPress={submit} loading={loading}>

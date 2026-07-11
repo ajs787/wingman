@@ -43,12 +43,12 @@ export async function POST(request) {
 
     const emailLower = email.toLowerCase();
 
-    // Validate .edu email
+    // Validate email format (any domain is accepted).
     try {
       emailSchema.parse(emailLower);
     } catch (err) {
       return NextResponse.json(
-        { error: 'Email must be from a college domain (.edu).' },
+        { error: 'That Google account has an invalid email address.' },
         { status: 400 }
       );
     }
