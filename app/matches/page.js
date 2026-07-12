@@ -145,61 +145,39 @@ function MatchCard({ match, onAccept, onReject }) {
         </div>
       </button>
 
-      {/* Friend note from wingman */}
-      {match.friendNote && (
-        <div className="px-5 py-4 border-b border-slate-100 bg-slate-50">
-          <p className="text-xs text-slate-500 font-medium mb-1">Note from your friend:</p>
-          <p className="text-sm text-slate-700 italic">&ldquo;{match.friendNote}&rdquo;</p>
-        </div>
-      )}
-
-      {/* Your wingmen's take: who made the match, who accepted/rejected, who sent
-          the like. Consolidated into one block (previously "Matched by" repeated
-          the same matchedBy name in its own separate box right above this). */}
-      {(match.wingmen?.decisions?.length > 0 || match.wingmen?.sent?.length > 0 || match.wingmen?.matchedBy || match.matchedBy?.name) && (
-        <div className="px-5 py-4 border-b border-slate-100 space-y-2">
-          <p className="text-xs text-slate-500 font-medium">Your wingmen&apos;s take:</p>
-          {(match.wingmen?.matchedBy?.name || match.matchedBy?.name) && (
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-full overflow-hidden flex-shrink-0 bg-gray-600 flex items-center justify-center">
-                {(match.wingmen?.matchedBy?.photo || match.matchedBy?.photo) ? (
-                  <img
-                    src={match.wingmen?.matchedBy?.photo || match.matchedBy?.photo}
-                    alt={match.wingmen?.matchedBy?.name || match.matchedBy?.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <span className="text-white text-xs font-bold">{(match.wingmen?.matchedBy?.name || match.matchedBy?.name)[0]}</span>
-                )}
-              </div>
-              <p className="text-xs text-slate-600">
-                <span className="font-semibold text-[#e0447f]">{match.wingmen?.matchedBy?.name || match.matchedBy?.name}</span> made this match for you
-              </p>
-            </div>
-          )}
-          {match.wingmen?.decisions?.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {match.wingmen.decisions.map((decision, decisionIdx) => (
-                <span
-                  key={`${decision.wingman?._id || 'd'}-${decisionIdx}`}
-                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold text-white ${
-                    decision.decision === 'accept' ? 'bg-green-600' : 'bg-red-500'
-                  }`}
-                >
-                  {decision.decision === 'accept' ? <Check className="w-2.5 h-2.5" /> : <X className="w-2.5 h-2.5" />}
-                  {decision.wingman?.name?.split(' ')[0] || 'Wingman'}
-                </span>
-              ))}
-            </div>
-          )}
-          {match.wingmen?.sent?.map((sent, sentIdx) => (
-            <p key={`${sent.wingman?._id || 's'}-${sentIdx}`} className="text-xs text-slate-500">
-              <span className="font-semibold">{sent.wingman?.name || 'A wingman'}</span> sent the like
-              {sent.comment ? <span className="italic"> — &ldquo;{sent.comment}&rdquo;</span> : null}
+      {/* Who liked this match, with the note they wrote. One consolidated section
+          (previously this repeated the same note across "Note from your friend"
+          and "Your wingmen's take"). */}
+      {(() => {
+        const likedBy = match.matchedByList?.length
+          ? match.matchedByList
+          : match.matchedBy ? [match.matchedBy] : [];
+        if (!likedBy.length) return null;
+        return (
+          <div className="px-5 py-4 border-b border-slate-100 space-y-3">
+            <p className="text-xs text-slate-500 font-medium">
+              {likedBy.length === 1 ? 'Liked by' : 'Liked by your friends'}
             </p>
-          ))}
-        </div>
-      )}
+            {likedBy.map((friend, i) => (
+              <div key={friend._id || `${friend.name}-${i}`} className="flex items-start gap-2.5">
+                <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 bg-gray-600 flex items-center justify-center">
+                  {friend.photo ? (
+                    <img src={friend.photo} alt={friend.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-white text-[11px] font-bold">{friend.name?.[0] ?? '?'}</span>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-700">{friend.name}</p>
+                  <p className="text-sm text-slate-600">
+                    {friend.friend_note ? <span className="italic">&ldquo;{friend.friend_note}&rdquo;</span> : 'Liked them for you'}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Expandable prompts */}
       {person?.prompts?.length > 0 && (
