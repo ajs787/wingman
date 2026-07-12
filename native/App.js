@@ -2434,24 +2434,20 @@ function MatchCard({ match, onChat }) {
           <Text style={styles.statusText}>You&rsquo;re matched · ready to chat</Text>
         </View>
       </View>
-      {match.friendNote ? (
-        <View style={styles.friendNote}>
-          <Text style={styles.sectionLabel}>Note from your friend</Text>
-          <Text style={styles.noteText}>{match.friendNote}</Text>
-        </View>
-      ) : null}
       {matchedByList.length > 0 ? (
         <View style={styles.friendNote}>
-          <Text style={styles.sectionLabel}>Friends who liked this match</Text>
+          <Text style={styles.sectionLabel}>
+            {matchedByList.length === 1 ? 'Liked by' : 'Liked by your friends'}
+          </Text>
           <View style={styles.swiperList}>
             {matchedByList.map((friend, friendIndex) => (
               <View key={friend._id || `${friend.name}-${friendIndex}`} style={styles.swiperRow}>
                 <Avatar uri={imageUrl(friend.photo)} name={friend.name} size={34} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.swiperName}>{friend.name}</Text>
-                  {friend.friend_note ? (
-                    <Text style={styles.swiperNote} numberOfLines={2}>{friend.friend_note}</Text>
-                  ) : null}
+                  <Text style={styles.swiperNote}>
+                    {friend.friend_note ? `“${friend.friend_note}”` : 'Liked them for you'}
+                  </Text>
                 </View>
               </View>
             ))}
