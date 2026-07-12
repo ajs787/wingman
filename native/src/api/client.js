@@ -237,32 +237,34 @@ export async function login(email, password) {
   return user;
 }
 
-// Sign up with email + password + phone. The account isn't usable until the
-// phone is verified via verifyPhoneOtp — this returns the phone to verify.
-export async function signup(email, password, phoneNumber) {
+export async function signup(email, password) {
   const data = await apiRequest('/api/auth/signup', {
     method: 'POST',
-    body: { email, password, phone_number: phoneNumber },
+    body: { email, password },
   });
-  return {
-    requiresPhoneVerification: true,
-    phone_number: data.phone_number,
-    devOtp: data.devOtp,
+  if (data.requiresEmailVerification) {
+    return {
+      requiresEmailVerification: true,
+      email: data.email,
+      devVerificationCode: data.devVerificationCode,
+    };
+  }
+
+  const user = {
+    userId: data.userId,
+    email: data.email,
+    netid: data.netid,
+    hasProfile: data.hasProfile,
   };
+  await persistSessionToken(data);
+  await saveStoredUser(user);
+  return user;
 }
 
-export async function requestPhoneOtp(phoneNumber) {
-  return apiRequest('/api/auth/phone/request-otp', {
+export async function verifyEmail(email, code) {
+  const data = await apiRequest('/api/auth/email/verify', {
     method: 'POST',
-    body: { phone_number: phoneNumber },
-  });
-}
-
-// Verify the phone OTP; on success the account is active and the session is stored.
-export async function verifyPhoneOtp(phoneNumber, otp) {
-  const data = await apiRequest('/api/auth/phone/verify-otp', {
-    method: 'POST',
-    body: { phone_number: phoneNumber, otp },
+    body: { email, code },
   });
   const user = {
     userId: data.userId,
@@ -273,6 +275,13 @@ export async function verifyPhoneOtp(phoneNumber, otp) {
   await persistSessionToken(data);
   await saveStoredUser(user);
   return user;
+}
+
+export async function resendEmailVerification(email) {
+  return apiRequest('/api/auth/email/resend', {
+    method: 'POST',
+    body: { email },
+  });
 }
 
 export async function logout() {

@@ -52,12 +52,12 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Incorrect password.' }, { status: 401 });
   }
 
-  if (!user.phone_verified) {
+  if (!user.email_verified) {
     return NextResponse.json(
       {
-        error: 'Please verify your phone number to finish signing in.',
-        code: 'PHONE_NOT_VERIFIED',
-        phone_number: user.phone_number || null,
+        error: 'Please verify your email before logging in.',
+        code: 'EMAIL_NOT_VERIFIED',
+        email,
       },
       { status: 403 }
     );
