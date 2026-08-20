@@ -122,11 +122,6 @@ export default function FeedPage() {
               <div className="flex items-center gap-3">
                 <div className="relative">
                   <Heart className="w-8 h-8 text-orange-400" />
-                  {pendingMatchCount > 0 && (
-                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-black rounded-full flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">{pendingMatchCount}</span>
-                    </div>
-                  )}
                 </div>
                 <div>
                     <p className="font-display font-bold text-slate-800">
@@ -152,18 +147,13 @@ export default function FeedPage() {
                 <div className="flex items-center gap-3">
                   <div className="relative">
                     <Mail className="w-8 h-8 text-orange-400" />
-                    {incomingCount > 0 && (
-                      <div className="absolute -top-1 -right-1 w-5 h-5 bg-black rounded-full flex items-center justify-center">
-                        <span className="text-white text-xs font-bold">{incomingCount}</span>
-                      </div>
-                    )}
                   </div>
                   <div>
                     <p className="font-display font-bold text-slate-800">
                       {incomingCount > 0 ? `${incomingCount} incoming like${incomingCount !== 1 ? 's' : ''}` : 'Incoming likes'}
                     </p>
                     <p className="text-xs text-slate-400">
-                      {incomingCount > 0 ? 'Waiting for your crew to review' : 'Likes sent your way land here'}
+                      {incomingCount > 0 ? 'New likes for your crew to look at' : 'Likes sent your way land here'}
                     </p>
                   </div>
                 </div>
@@ -316,11 +306,6 @@ export default function FeedPage() {
           </Link>
           <Link href="/matches" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-slate-400 hover:text-slate-700 relative">
             <Heart className="w-6 h-6" />
-            {pendingMatchCount > 0 && (
-              <div className="absolute -top-1 right-5 w-4 h-4 bg-black rounded-full flex items-center justify-center">
-                <span className="text-white text-[10px] font-bold">{pendingMatchCount}</span>
-              </div>
-            )}
             <span className="text-xs">Matches</span>
           </Link>
           <Link href="/chat" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-slate-400 hover:text-slate-700">

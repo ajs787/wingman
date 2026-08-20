@@ -2,24 +2,21 @@ export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { writeFile, mkdir, unlink } from 'fs/promises';
-import path from 'path';
 import { connectDB } from '@/lib/mongodb';
 import User from '@/lib/models/User';
 import { getSession } from '@/lib/auth';
+import { putProfilePhoto, deleteProfilePhoto, photoWithUrl } from '@/lib/photos';
 
-function photoWithUrl(photo, userId) {
-  return {
-    ...photo,
-    url: photo.filename ? `/uploads/${userId}/${photo.filename}` : null,
-  };
-}
-
+// Reorder/save round-trips whole photo records back from the client. Photos may be
+// blob-backed (url + blob_pathname) or legacy (filename) — accept either so neither
+// is dropped when the array is rewritten.
 const reorderSchema = z.object({
   photos: z.array(
     z.object({
       position:      z.number().int().min(0).max(4),
-      filename:      z.string(),
+      url:           z.string().nullable().optional(),
+      blob_pathname: z.string().nullable().optional(),
+      filename:      z.string().nullable().optional(),
       prompt:        z.string().max(300).nullable().optional(),
       prompt_answer: z.string().max(300).nullable().optional(),
     })
@@ -41,8 +38,18 @@ export async function POST(request) {
     const parsed = reorderSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
 
+    // Normalize: keep url/filename/blob_pathname so nothing is lost on rewrite.
+    const photos = parsed.data.photos.map((p) => ({
+      position: p.position,
+      url: p.url ?? null,
+      blob_pathname: p.blob_pathname ?? null,
+      filename: p.filename ?? null,
+      prompt: p.prompt ?? null,
+      prompt_answer: p.prompt_answer ?? null,
+    }));
+
     await connectDB();
-    await User.findByIdAndUpdate(session.sub, { $set: { photos: parsed.data.photos } });
+    await User.findByIdAndUpdate(session.sub, { $set: { photos } });
     return NextResponse.json({ success: true });
   }
 
@@ -71,7 +78,8 @@ export async function POST(request) {
     'image/heic': 'heic',
     'image/heif': 'heic',
   };
-  const ext = IMAGE_EXT[(file.type || '').toLowerCase()];
+  const contentType = (file.type || '').toLowerCase();
+  const ext = IMAGE_EXT[contentType];
   if (!ext) {
     return NextResponse.json({ error: 'Only JPEG, PNG, WebP, GIF, or HEIC images are allowed.' }, { status: 415 });
   }
@@ -80,34 +88,43 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Image must be 8 MB or smaller.' }, { status: 413 });
   }
 
-  const userId = session.sub;
-  const uploadDir = path.join(process.cwd(), 'public', 'uploads', userId);
-  await mkdir(uploadDir, { recursive: true });
-
-  await connectDB();
-  const user = await User.findById(userId);
-  if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
-
-  // Delete old file at this position
-  const existing = user.photos.find((p) => p.position === position);
-  if (existing?.filename) {
-    const oldPath = path.join(uploadDir, existing.filename);
-    await unlink(oldPath).catch(() => {});
-  }
-
-  // Save new file (ext is the validated image extension from the allow-list above)
-  const random = Math.random().toString(36).slice(2, 8);
-  const filename = `${position}-${random}.${ext}`;
-  const filePath = path.join(uploadDir, filename);
-
   const arrayBuffer = await file.arrayBuffer();
   if (arrayBuffer.byteLength > MAX_UPLOAD_BYTES) {
     return NextResponse.json({ error: 'Image must be 8 MB or smaller.' }, { status: 413 });
   }
-  await writeFile(filePath, Buffer.from(arrayBuffer));
 
-  // Update photos array in MongoDB
-  const newPhoto = { position, filename, prompt: prompt || null, prompt_answer: prompt_answer || null };
+  const userId = session.sub;
+  await connectDB();
+  const user = await User.findById(userId);
+  if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+  // Persistent object storage (Vercel Blob). The serverless filesystem is
+  // read-only/ephemeral, so we never write photos to disk.
+  let uploaded;
+  try {
+    uploaded = await putProfilePhoto({
+      userId,
+      position,
+      buffer: Buffer.from(arrayBuffer),
+      contentType,
+      ext,
+    });
+  } catch (err) {
+    return NextResponse.json({ error: err.message || 'Upload failed' }, { status: 500 });
+  }
+
+  // Best-effort delete of whatever was at this position before.
+  const existing = user.photos.find((p) => p.position === position);
+  if (existing) await deleteProfilePhoto(existing);
+
+  const newPhoto = {
+    position,
+    url: uploaded.url,
+    blob_pathname: uploaded.pathname,
+    filename: null,
+    prompt: prompt || null,
+    prompt_answer: prompt_answer || null,
+  };
 
   if (existing) {
     await User.updateOne(
@@ -118,9 +135,7 @@ export async function POST(request) {
     await User.updateOne({ _id: userId }, { $push: { photos: newPhoto } });
   }
 
-  return NextResponse.json({
-    photo: { ...newPhoto, url: `/uploads/${userId}/${filename}` },
-  });
+  return NextResponse.json({ photo: photoWithUrl(newPhoto, userId) });
 }
 
 export async function DELETE(request) {
@@ -139,11 +154,7 @@ export async function DELETE(request) {
   const photo = user.photos.find((p) => p.position === position);
   if (!photo) return NextResponse.json({ error: 'Photo not found' }, { status: 404 });
 
-  if (photo.filename) {
-    const filePath = path.join(process.cwd(), 'public', 'uploads', userId, photo.filename);
-    await unlink(filePath).catch(() => {});
-  }
-
+  await deleteProfilePhoto(photo);
   await User.updateOne({ _id: userId }, { $pull: { photos: { position } } });
   return NextResponse.json({ success: true });
 }
