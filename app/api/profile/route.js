@@ -9,10 +9,11 @@ import { getSession } from '@/lib/auth';
 function photoWithUrl(photo, userId) {
   return {
     position: photo.position,
-    filename: photo.filename,
+    filename: photo.filename ?? null,
+    blob_pathname: photo.blob_pathname ?? null,
     prompt: photo.prompt,
     prompt_answer: photo.prompt_answer,
-    url: photo.filename ? `/uploads/${userId}/${photo.filename}` : null,
+    url: photo.url || (photo.filename ? `/uploads/${userId}/${photo.filename}` : null),
   };
 }
 

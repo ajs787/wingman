@@ -11,7 +11,7 @@ import User from '@/lib/models/User';
 import { getSession } from '@/lib/auth';
 
 function photoUrl(photo, userId) {
-  return photo?.filename ? `/uploads/${userId}/${photo.filename}` : null;
+  return photo?.url || (photo?.filename ? `/uploads/${userId}/${photo.filename}` : null);
 }
 function displayName(user) {
   return user?.name || [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.email || 'Wingman';

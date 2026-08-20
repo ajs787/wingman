@@ -595,8 +595,6 @@ export default function OwnerFeedPage() {
   const [swiping, setSwiping] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({});
-  // null until the first like response; null likesRemaining from the API means unlimited (Pro).
-  const [likesRemaining, setLikesRemaining] = useState(undefined);
 
   useEffect(() => {
     async function load() {
@@ -682,21 +680,7 @@ export default function OwnerFeedPage() {
       });
       const data = await res.json().catch(() => ({}));
 
-      // Owner is out of daily likes — nudge toward Pro, keep the card in place.
-      if (res.status === 429) {
-        toast({
-          title: 'Out of likes for today',
-          description: `${ownerProfile?.name ?? 'Your friend'} is out of daily likes. Upgrade to Wingman Pro for unlimited likes.`,
-          variant: 'destructive',
-        });
-        setSwiping(false);
-        return;
-      }
-
       if (res.ok) {
-        if (data.likeQuota) {
-          setLikesRemaining(data.likeQuota.likesRemaining);
-        }
         // A like no longer matches instantly — it goes to the other side's wingmen.
         if (data.sent) {
           toast({
@@ -783,21 +767,6 @@ export default function OwnerFeedPage() {
         <p className="text-center text-[11px] text-slate-500 mt-1.5">
           Likes go to their wingmen for a final yes
         </p>
-
-        {likesRemaining !== undefined && (
-          <div className="max-w-sm mx-auto mt-2 flex justify-center">
-            {likesRemaining === null ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/15 px-3 py-1 text-xs font-medium text-amber-300">
-                <Sparkles className="w-3 h-3" /> Unlimited likes · Pro
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300">
-                <Heart className="w-3 h-3" />
-                {likesRemaining} {likesRemaining === 1 ? 'like' : 'likes'} left today
-              </span>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Content */}

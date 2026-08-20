@@ -942,9 +942,13 @@ function OnboardingScreen({ profile, onComplete, onBack, editing = false, allAtO
     const initial = Array.from({ length: MAX_PROFILE_PHOTOS }, (_, index) => {
       const existing = profile?.photos?.find((photo) => photo.position === index);
       return existing ? {
-        id: existing.filename || `existing-${index}`,
+        id: existing.filename || existing.url || `existing-${index}`,
         existingUrl: imageUrl(existing.url),
-        filename: existing.filename,
+        filename: existing.filename || null,
+        // Stored blob URL — only for blob-backed photos (legacy ones carry a filename
+        // instead). Kept so it survives the reorder/save round-trip.
+        blobUrl: existing.filename ? null : (existing.url || null),
+        blobPathname: existing.blob_pathname || null,
         prompt: existing.prompt || '',
         answer: existing.prompt_answer || '',
       } : null;
@@ -1163,11 +1167,16 @@ function OnboardingScreen({ profile, onComplete, onBack, editing = false, allAtO
 
       const existingPhotos = photos
         .map((photo, index) => {
-          if (!photo?.filename || photo.asset) return null;
+          // Skip empty slots and freshly-picked assets (uploaded separately below).
+          // Keep any already-persisted photo — blob-backed (blobUrl) or legacy (filename).
+          if (photo?.asset) return null;
+          if (!photo?.filename && !photo?.blobUrl) return null;
           const promptRow = photoPromptForIndex(promptRows, index);
           return {
             position: index,
-            filename: photo.filename,
+            filename: photo.filename || null,
+            url: photo.blobUrl || null,
+            blob_pathname: photo.blobPathname || null,
             prompt: promptRow.prompt || null,
             prompt_answer: promptRow.answer || null,
           };
@@ -1427,7 +1436,7 @@ function HomeScreen({ profile, onSelectOwner, onRoute, onSignOut, setPendingMatc
 
   return (
     <Screen
-      footer={<BottomTabs current="home" pending={pendingCount} onNavigate={onRoute} />}
+      footer={<BottomTabs current="home" onNavigate={onRoute} />}
     >
       <Header
         title={`Hey, ${initialsName(profile)}`}
@@ -1802,8 +1811,8 @@ function SwipeScreen({ owner, onBack }) {
         ) : !candidate ? (
           <EmptyState
             icon="checkmark-circle"
-            title="No more profiles"
-            body="You have reached the end of this feed for now."
+            title="You're all caught up 🎉"
+            body="You've swiped through everyone for now. New faces show up as more people join — nice work."
           />
         ) : (
           <SwipeDeck candidates={candidates} index={index} onCommit={swipe} />
@@ -2012,7 +2021,14 @@ function SwipeDeck({ candidates, index, onCommit }) {
         <Screen>
           <View style={styles.detailHeader}>
             <Text style={styles.detailHeaderTitle}>{current.name || 'Profile'}</Text>
-            <IconButton icon="close" label="Close" onPress={() => setDetailOpen(false)} />
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <SafetyActions
+                targetUser={current}
+                blockReason="Blocked from profile."
+                onResolved={() => { setDetailOpen(false); forceSwipe('left'); }}
+              />
+              <IconButton icon="close" label="Close" onPress={() => setDetailOpen(false)} />
+            </View>
           </View>
           <CandidateCard candidate={current} />
         </Screen>
@@ -2585,51 +2601,56 @@ const REPORT_REASONS = [
   { key: 'other', label: 'Other' },
 ];
 
-function ChatRoomScreen({ match, onBack }) {
-  const [messages, setMessages] = useState([]);
-  const [otherUser, setOtherUser] = useState(match.profile || null);
-  const [content, setContent] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState('');
-  // Tapping a message toggles its exact timestamp even mid-run, like iMessage.
-  const [revealedId, setRevealedId] = useState(null);
-  // Safety: report + block (Apple App Store 1.2 requirement for UGC/dating).
+// Report + block, reusable from any surface where you see another user (chat, a
+// candidate's full profile, a match). Apple App Store Guideline 1.2 requires UGC/
+// dating apps to let users report objectionable content and block abusive users —
+// so this must be reachable BEFORE matching (from a profile), not only in chat.
+// Renders its own trigger button plus the action sheet and report modal.
+function SafetyActions({
+  targetUser,
+  context = {},
+  blockReason = 'Blocked.',
+  onResolved,
+  icon = 'ellipsis-horizontal',
+  label = 'Safety options',
+}) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState('harassment');
   const [reportDetails, setReportDetails] = useState('');
-  const [safetyBusy, setSafetyBusy] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const name = targetUser?.first_name || targetUser?.name || 'this person';
 
   async function submitReport() {
-    if (!otherUser?._id || reportDetails.trim().length < 5 || safetyBusy) return;
-    setSafetyBusy(true);
+    if (!targetUser?._id || reportDetails.trim().length < 5 || busy) return;
+    setBusy(true);
     try {
       await apiRequest('/api/report', {
         method: 'POST',
         body: {
-          reportedUserId: otherUser._id,
+          reportedUserId: targetUser._id,
           reason: reportReason,
           details: reportDetails.trim(),
-          matchId: match._id,
-          conversationId: match._id,
+          ...(context.matchId ? { matchId: context.matchId } : {}),
+          ...(context.conversationId ? { conversationId: context.conversationId } : {}),
           autoBlock: true,
         },
       });
       setReportOpen(false);
       setReportDetails('');
       Alert.alert('Report submitted', 'Thanks — our team will review this, and we’ve blocked this person for you.');
-      onBack();
+      onResolved?.();
     } catch (err) {
       Alert.alert('Could not submit report', err.message);
     } finally {
-      setSafetyBusy(false);
+      setBusy(false);
     }
   }
 
   function confirmBlock() {
     Alert.alert(
-      `Block ${otherUser?.first_name || otherUser?.name || 'this person'}?`,
+      `Block ${name}?`,
       'You will no longer see each other or be able to message.',
       [
         { text: 'Cancel', style: 'cancel' },
@@ -2640,9 +2661,9 @@ function ChatRoomScreen({ match, onBack }) {
             try {
               await apiRequest('/api/block', {
                 method: 'POST',
-                body: { blockedUserId: otherUser._id, reason: 'Blocked from chat.' },
+                body: { blockedUserId: targetUser._id, reason: blockReason },
               });
-              onBack();
+              onResolved?.();
             } catch (err) {
               Alert.alert('Could not block', err.message);
             }
@@ -2651,6 +2672,76 @@ function ChatRoomScreen({ match, onBack }) {
       ]
     );
   }
+
+  if (!targetUser?._id) return null;
+
+  return (
+    <>
+      <IconButton icon={icon} label={label} onPress={() => setMenuOpen(true)} />
+
+      {/* Safety action sheet */}
+      <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
+        <Pressable style={styles.sheetBackdrop} onPress={() => setMenuOpen(false)}>
+          <Pressable style={styles.sheetCard} onPress={(e) => e.stopPropagation()}>
+            <Pressable style={styles.sheetRow} onPress={() => { setMenuOpen(false); setReportOpen(true); }}>
+              <Ionicons name="flag" size={20} color={colors.text} />
+              <Text style={styles.sheetRowText}>Report {name}</Text>
+            </Pressable>
+            <Pressable style={styles.sheetRow} onPress={() => { setMenuOpen(false); confirmBlock(); }}>
+              <Ionicons name="ban" size={20} color={colors.red} />
+              <Text style={[styles.sheetRowText, { color: colors.red }]}>Block {name}</Text>
+            </Pressable>
+            <Pressable style={[styles.sheetRow, styles.sheetCancel]} onPress={() => setMenuOpen(false)}>
+              <Text style={styles.sheetRowText}>Cancel</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Report modal */}
+      <Modal visible={reportOpen} transparent animationType="slide" onRequestClose={() => setReportOpen(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>Report {name}</Text>
+            <Text style={styles.helpText}>Reports are private. This person won’t know who reported them, and we’ll block them for you.</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.replyChipRow}>
+              {REPORT_REASONS.map((r) => {
+                const active = reportReason === r.key;
+                return (
+                  <Pressable key={r.key} onPress={() => setReportReason(r.key)} style={[styles.replyChip, active && styles.replyChipActive]}>
+                    <Text style={[styles.replyChipText, active && styles.replyChipTextActive]}>{r.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+            <TextField
+              value={reportDetails}
+              onChangeText={setReportDetails}
+              placeholder="Share what happened (at least 5 characters)"
+              multiline
+            />
+            <View style={styles.actionRow}>
+              <Button style={styles.actionButton} variant="secondary" onPress={() => setReportOpen(false)}>Cancel</Button>
+              <Button style={styles.actionButton} onPress={submitReport} loading={busy} disabled={reportDetails.trim().length < 5}>
+                Submit report
+              </Button>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </>
+  );
+}
+
+function ChatRoomScreen({ match, onBack }) {
+  const [messages, setMessages] = useState([]);
+  const [otherUser, setOtherUser] = useState(match.profile || null);
+  const [content, setContent] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+  // Tapping a message toggles its exact timestamp even mid-run, like iMessage.
+  const [revealedId, setRevealedId] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -2706,7 +2797,14 @@ function ChatRoomScreen({ match, onBack }) {
         title={otherUser?.name || 'Chat'}
         subtitle="Accepted match"
         onBack={onBack}
-        right={<IconButton icon="ellipsis-horizontal" label="Safety options" onPress={() => setMenuOpen(true)} />}
+        right={otherUser ? (
+          <SafetyActions
+            targetUser={otherUser}
+            context={{ matchId: match._id, conversationId: match._id }}
+            blockReason="Blocked from chat."
+            onResolved={onBack}
+          />
+        ) : undefined}
       />
       <ErrorBanner message={error} />
       {loading ? (
@@ -2731,63 +2829,6 @@ function ChatRoomScreen({ match, onBack }) {
           }
         />
       )}
-
-      {/* Safety action sheet */}
-      <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
-        <Pressable style={styles.sheetBackdrop} onPress={() => setMenuOpen(false)}>
-          <Pressable style={styles.sheetCard} onPress={(e) => e.stopPropagation()}>
-            <Pressable
-              style={styles.sheetRow}
-              onPress={() => { setMenuOpen(false); setReportOpen(true); }}
-            >
-              <Ionicons name="flag" size={20} color={colors.text} />
-              <Text style={styles.sheetRowText}>Report {otherUser?.first_name || otherUser?.name || 'user'}</Text>
-            </Pressable>
-            <Pressable
-              style={styles.sheetRow}
-              onPress={() => { setMenuOpen(false); confirmBlock(); }}
-            >
-              <Ionicons name="ban" size={20} color={colors.red} />
-              <Text style={[styles.sheetRowText, { color: colors.red }]}>Block {otherUser?.first_name || otherUser?.name || 'user'}</Text>
-            </Pressable>
-            <Pressable style={[styles.sheetRow, styles.sheetCancel]} onPress={() => setMenuOpen(false)}>
-              <Text style={styles.sheetRowText}>Cancel</Text>
-            </Pressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* Report modal */}
-      <Modal visible={reportOpen} transparent animationType="slide" onRequestClose={() => setReportOpen(false)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalSheet}>
-            <Text style={styles.modalTitle}>Report {otherUser?.first_name || otherUser?.name || 'user'}</Text>
-            <Text style={styles.helpText}>Reports are private. This person won’t know who reported them, and we’ll block them for you.</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.replyChipRow}>
-              {REPORT_REASONS.map((r) => {
-                const active = reportReason === r.key;
-                return (
-                  <Pressable key={r.key} onPress={() => setReportReason(r.key)} style={[styles.replyChip, active && styles.replyChipActive]}>
-                    <Text style={[styles.replyChipText, active && styles.replyChipTextActive]}>{r.label}</Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-            <TextField
-              value={reportDetails}
-              onChangeText={setReportDetails}
-              placeholder="Share what happened (at least 5 characters)"
-              multiline
-            />
-            <View style={styles.actionRow}>
-              <Button style={styles.actionButton} variant="secondary" onPress={() => setReportOpen(false)}>Cancel</Button>
-              <Button style={styles.actionButton} onPress={submitReport} loading={safetyBusy} disabled={reportDetails.trim().length < 5}>
-                Submit report
-              </Button>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </Screen>
   );
 }

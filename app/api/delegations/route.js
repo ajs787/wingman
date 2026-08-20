@@ -21,7 +21,7 @@ function serializeUser(u) {
       .sort((a, b) => a.position - b.position)
       .map((p) => ({
         position: p.position,
-        url: p.filename ? `/uploads/${uid}/${p.filename}` : null,
+        url: p.url || (p.filename ? `/uploads/${uid}/${p.filename}` : null),
         prompt: p.prompt,
         prompt_answer: p.prompt_answer,
       })),

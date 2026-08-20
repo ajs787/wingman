@@ -12,7 +12,7 @@ import { getSession } from '@/lib/auth';
 import { getBlockedUserIds } from '@/lib/safety/blocking';
 
 function photoUrl(photo, userId) {
-  return photo.filename ? `/uploads/${userId}/${photo.filename}` : null;
+  return photo?.url || (photo?.filename ? `/uploads/${userId}/${photo.filename}` : null);
 }
 
 function serializeUser(u) {

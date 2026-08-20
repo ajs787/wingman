@@ -267,7 +267,7 @@ export function Header({ title, subtitle, onBack, right }) {
   );
 }
 
-export function BottomTabs({ current, onNavigate, pending = 0 }) {
+export function BottomTabs({ current, onNavigate }) {
   const items = [
     { key: 'home', label: 'Feed', icon: 'albums' },
     { key: 'matches', label: 'Matches', icon: 'heart' },
@@ -288,11 +288,6 @@ export function BottomTabs({ current, onNavigate, pending = 0 }) {
             >
               <View>
                 <Ionicons name={item.icon} size={21} color={active ? colors.pink : colors.muted} />
-                {item.key === 'matches' && pending > 0 ? (
-                  <View style={styles.badgeDot}>
-                    <Text style={styles.badgeText}>{pending}</Text>
-                  </View>
-                ) : null}
               </View>
               <Text style={[styles.tabText, active && styles.tabTextActive]}>{item.label}</Text>
             </Pressable>

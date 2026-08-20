@@ -7,18 +7,7 @@ import Delegation from '@/lib/models/Delegation';
 import User from '@/lib/models/User';
 import { getSession } from '@/lib/auth';
 import { computeWingmanStats } from '@/lib/wingman-rank';
-
-function photoUrl(photo, userId) {
-  return photo?.filename ? `/uploads/${userId}/${photo.filename}` : null;
-}
-function displayName(user) {
-  return user?.name || [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.email || 'Wingman';
-}
-function mainPhoto(user) {
-  const uid = user?._id?.toString();
-  const first = (user?.photos ?? []).slice().sort((a, b) => a.position - b.position)[0];
-  return uid && first ? photoUrl(first, uid) : null;
-}
+import { getRecentWins, displayName, mainPhoto } from '@/lib/matchmaker-feed';
 
 // GET /api/wingman/rank            -> the caller's own rank card
 // GET /api/wingman/rank?ownerId=O  -> leaderboard of O's active wingmen (visible to O
@@ -33,8 +22,11 @@ export async function GET(request) {
   await connectDB();
 
   if (!ownerId) {
-    const stats = await computeWingmanStats([session.sub]);
-    return NextResponse.json({ rank: stats.get(session.sub) });
+    const [stats, wins] = await Promise.all([
+      computeWingmanStats([session.sub]),
+      getRecentWins(session.sub),
+    ]);
+    return NextResponse.json({ rank: stats.get(session.sub), recentWins: wins });
   }
 
   if (!mongoose.Types.ObjectId.isValid(ownerId)) {

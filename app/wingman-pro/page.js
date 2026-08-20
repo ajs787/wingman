@@ -7,10 +7,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { ArrowLeft, Check, Sparkles, Crown, Infinity as InfinityIcon, Eye, Users, Zap } from 'lucide-react';
+import { ArrowLeft, Check, Sparkles, Crown, Trophy, Eye, Users, Zap } from 'lucide-react';
 
 const PRO_BENEFITS = [
-  { icon: InfinityIcon, title: 'Unlimited likes', desc: 'Your wingmen never run out of daily likes.' },
+  { icon: Trophy, title: 'Matchmaker stats & badges', desc: "See the couples you've sparked, your hit rate, and your rank." },
   { icon: Eye, title: 'See who liked your friend', desc: 'Reveal everyone already interested before you swipe.' },
   { icon: Users, title: 'Swipe for up to 25 friends', desc: 'Be a wingman for your whole crew, not just 3.' },
   { icon: Sparkles, title: 'Full compatibility breakdown', desc: 'See exactly why each match is a fit.' },
