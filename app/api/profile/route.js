@@ -71,7 +71,7 @@ const profileSchema = z.object({
   first_name:         z.string().min(1).max(50).optional(),
   last_name:          z.string().min(1).max(50).optional(),
   name:               z.string().min(1).max(100).optional(),
-  age:                z.number().int().min(17).max(99),
+  age:                z.number().int().min(18).max(99),
   school:             z.string().min(1).max(200).optional(),
   year:               z.string().min(1),
   majors:             z.array(z.string()).optional(),
