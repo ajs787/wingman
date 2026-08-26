@@ -43,8 +43,7 @@ export default function TermsPage() {
         <div className="mt-8 space-y-7 text-[15px] leading-relaxed text-slate-700">
           <p>
             These Terms of Service (&ldquo;Terms&rdquo;) are a binding agreement between you and
-            Wingman (&ldquo;Wingman,&rdquo; &ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;)
-            {' '}[[CONFIRM: insert the legal entity, e.g. &ldquo;Wingman, Inc.&rdquo;]] governing your
+            Wingman (&ldquo;Wingman,&rdquo; &ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;) governing your
             use of the Wingman mobile application, website, and related services (together, the
             &ldquo;Service&rdquo;). By creating an account or using the Service, you agree to these
             Terms and to our{' '}
@@ -234,7 +233,7 @@ export default function TermsPage() {
               <strong>Binding arbitration.</strong> If we can&rsquo;t resolve it informally, you and
               Wingman agree that any dispute arising out of or relating to these Terms or the Service
               will be resolved by <strong>final and binding individual arbitration</strong>,
-              administered by a recognized arbitration provider [[CONFIRM: e.g. AAA or JAMS]] under its
+              administered by the American Arbitration Association (AAA) under its
               consumer rules, rather than in court, except that either party may bring an individual
               claim in small-claims court.
             </p>
@@ -261,8 +260,7 @@ export default function TermsPage() {
 
           <Section n="15" title="Governing law and venue">
             <p>
-              These Terms are governed by the laws of the State of New Jersey, USA
-              {' '}[[CONFIRM: your entity&rsquo;s home state]], without regard to conflict-of-laws
+              These Terms are governed by the laws of the State of New Jersey, USA, without regard to conflict-of-laws
               rules. For any dispute not subject to arbitration, you and Wingman consent to the
               exclusive jurisdiction of the state and federal courts located in New Jersey. Nothing in
               this Section overrides mandatory consumer-protection rights you may have in your country

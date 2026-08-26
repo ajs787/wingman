@@ -30,8 +30,7 @@ export default function PrivacyPolicyPage() {
 
         <div className="mt-8 space-y-7 text-[15px] leading-relaxed text-slate-700">
           <p>
-            Wingman (&ldquo;Wingman,&rdquo; &ldquo;we,&rdquo; &ldquo;us&rdquo;)
-            {' '}[[CONFIRM: legal entity]] is a social matchmaking service where friends help each
+            Wingman (&ldquo;Wingman,&rdquo; &ldquo;we,&rdquo; &ldquo;us&rdquo;) is a social matchmaking service where friends help each
             other meet people. This Privacy Policy explains what information we collect, how we use
             and share it, the choices and rights you have, and how we protect it. By using Wingman you
             agree to this Policy. If you do not agree, do not use the Service.
