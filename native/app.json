@@ -28,7 +28,10 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#E0447F"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -42,10 +45,15 @@
         {
           "photosPermission": "Wingman needs access to your photos so you can add them to your dating profile."
         }
-      ]
+      ],
+      "./plugins/withFmtConstevalFix.js"
     ],
     "extra": {
-      "apiBaseUrl": "https://www.wingman33.com"
-    }
+      "apiBaseUrl": "https://www.wingman33.com",
+      "eas": {
+        "projectId": "5dbe853e-4d56-4b27-935a-387f3ab0099c"
+      }
+    },
+    "owner": "audfrog"
   }
 }
