@@ -308,7 +308,7 @@ function AuthForm() {
             type="button"
             onClick={() => switchMode('signup')}
             className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${
-              isSignup ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'
+              isSignup ? 'bg-[#ffffff] shadow-sm text-[#171717]' : 'text-white/70 hover:text-white'
             }`}
           >
             Sign up
@@ -317,7 +317,7 @@ function AuthForm() {
             type="button"
             onClick={() => switchMode('login')}
             className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${
-              !isSignup ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'
+              !isSignup ? 'bg-[#ffffff] shadow-sm text-[#171717]' : 'text-white/70 hover:text-white'
             }`}
           >
             Log in

@@ -87,15 +87,15 @@ export default function FeedPage() {
           <div className="flex items-center gap-1">
             <Link href="/settings">
               <Button variant="ghost" size="icon" title="Edit profile">
-                <UserCircle className="w-5 h-5 text-slate-500" />
+                <UserCircle className="w-5 h-5 text-muted-foreground" />
               </Button>
             </Link>
             <Link href="/account">
               <Button variant="ghost" size="icon" title="Account settings">
-                <Settings className="w-5 h-5 text-slate-500" />
+                <Settings className="w-5 h-5 text-muted-foreground" />
               </Button>
             </Link>
-            <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-slate-500">
+            <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-muted-foreground">
               Sign out
             </Button>
           </div>
@@ -106,8 +106,8 @@ export default function FeedPage() {
         {/* Greeting */}
         {myProfile?.name && (
           <div className="mb-8">
-            <h1 className="text-2xl font-display font-bold text-slate-900">Hey, {myProfile.first_name || myProfile.name}</h1>
-            <p className="text-slate-500 mt-1">Who are you swiping for today?</p>
+            <h1 className="text-2xl font-display font-bold text-foreground">Hey, {myProfile.first_name || myProfile.name}</h1>
+            <p className="text-muted-foreground mt-1">Who are you swiping for today?</p>
           </div>
         )}
 
@@ -115,19 +115,19 @@ export default function FeedPage() {
         <section className="mb-8">
           <div className="flex items-center gap-2 mb-4">
             <Sparkles className="w-4 h-4 text-orange-500" />
-            <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">My Matches</h2>
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">My Matches</h2>
           </div>
           <Link href="/matches">
-            <div className="flex items-center justify-between p-4 rounded-[1.5rem] border border-black/5 bg-background shadow-[0_16px_45px_-30px_rgba(119,77,24,0.30)] hover:border-orange-200 hover:bg-amber-50/60 transition-all group cursor-pointer">
+            <div className="flex items-center justify-between p-4 rounded-[1.5rem] border border-black/5 bg-card shadow-[0_16px_45px_-30px_rgba(119,77,24,0.30)] hover:border-white/20 hover:bg-white/5 transition-all group cursor-pointer">
               <div className="flex items-center gap-3">
                 <div className="relative">
                   <Heart className="w-8 h-8 text-orange-400" />
                 </div>
                 <div>
-                    <p className="font-display font-bold text-slate-800">
+                    <p className="font-display font-bold text-foreground">
                     {matchCount > 0 ? `${matchCount} match${matchCount !== 1 ? 'es' : ''}` : 'No matches yet'}
                   </p>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-muted-foreground">
                     {pendingMatchCount > 0
                       ? `${pendingMatchCount} waiting for your response`
                       : matchCount > 0
@@ -136,28 +136,28 @@ export default function FeedPage() {
                   </p>
                 </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-black transition-colors" />
+              <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-white transition-colors" />
             </div>
           </Link>
 
           {/* Incoming likes for my wingmen (and me) to review */}
           {myProfile?._id && (
             <Link href={`/likes/${myProfile._id}`}>
-              <div className="mt-3 flex items-center justify-between p-4 rounded-[1.5rem] border border-black/5 bg-background shadow-[0_16px_45px_-30px_rgba(119,77,24,0.30)] hover:border-orange-200 hover:bg-amber-50/60 transition-all group cursor-pointer">
+              <div className="mt-3 flex items-center justify-between p-4 rounded-[1.5rem] border border-black/5 bg-card shadow-[0_16px_45px_-30px_rgba(119,77,24,0.30)] hover:border-white/20 hover:bg-white/5 transition-all group cursor-pointer">
                 <div className="flex items-center gap-3">
                   <div className="relative">
                     <Mail className="w-8 h-8 text-orange-400" />
                   </div>
                   <div>
-                    <p className="font-display font-bold text-slate-800">
+                    <p className="font-display font-bold text-foreground">
                       {incomingCount > 0 ? `${incomingCount} incoming like${incomingCount !== 1 ? 's' : ''}` : 'Incoming likes'}
                     </p>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-muted-foreground">
                       {incomingCount > 0 ? 'New likes for your crew to look at' : 'Likes sent your way land here'}
                     </p>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-black transition-colors" />
+                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-white transition-colors" />
               </div>
             </Link>
           )}
@@ -167,21 +167,21 @@ export default function FeedPage() {
         <section className="mb-8">
           <div className="flex items-center gap-2 mb-4">
             <Users className="w-4 h-4 text-orange-500" />
-            <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Swipe for a friend</h2>
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Swipe for a friend</h2>
           </div>
 
           {loading ? (
             <div className="space-y-3">
               {[1, 2].map((i) => (
-                <div key={i} className="h-20 rounded-2xl bg-slate-100 animate-pulse" />
+                <div key={i} className="h-20 rounded-2xl bg-white/10 animate-pulse" />
               ))}
             </div>
           ) : friends.length === 0 ? (
-            <div className="text-center py-12 rounded-[1.5rem] bg-amber-50/70 border border-dashed border-amber-200">
+            <div className="text-center py-12 rounded-[1.5rem] bg-card border border-dashed border-white/20">
               <Heart className="w-8 h-8 text-orange-300 mx-auto mb-3" />
-              <p className="text-slate-500 font-medium">No friends added yet</p>
-              <p className="text-slate-400 text-sm mt-1 mb-4">Enter a friend&apos;s invite code to get started</p>
-              <p className="text-slate-400 text-xs mb-4">Basic version: up to {BASIC_MAX_ACTIVE_DELEGATIONS} friends at a time.</p>
+              <p className="text-muted-foreground font-medium">No friends added yet</p>
+              <p className="text-muted-foreground text-sm mt-1 mb-4">Enter a friend&apos;s invite code to get started</p>
+              <p className="text-muted-foreground text-xs mb-4">Basic version: up to {BASIC_MAX_ACTIVE_DELEGATIONS} friends at a time.</p>
               <Link href="/delegate">
                 <Button variant="outline" size="sm" className="gap-2">
                   <Plus className="w-4 h-4" /> Enter invite code
@@ -194,7 +194,7 @@ export default function FeedPage() {
                 <button
                   key={friend._id}
                   onClick={() => router.push(`/feed/${friend._id}`)}
-                  className="w-full flex items-center justify-between p-4 rounded-[1.5rem] border border-black/5 bg-background hover:border-orange-200 hover:bg-amber-50/60 transition-all group shadow-[0_14px_40px_-28px_rgba(119,77,24,0.25)]"
+                  className="w-full flex items-center justify-between p-4 rounded-[1.5rem] border border-black/5 bg-card hover:border-white/20 hover:bg-white/5 transition-all group shadow-[0_14px_40px_-28px_rgba(119,77,24,0.25)]"
                 >
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-600 flex-shrink-0">
@@ -207,13 +207,13 @@ export default function FeedPage() {
                       )}
                     </div>
                     <div className="text-left">
-                      <p className="font-display font-bold text-slate-800">{friend.name}</p>
-                      <p className="text-xs text-slate-400">
+                      <p className="font-display font-bold text-foreground">{friend.name}</p>
+                      <p className="text-xs text-muted-foreground">
                         {friend.school || friend.year} · {friend.majors?.join(', ') || friend.major}
                       </p>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-gray-600 transition-colors" />
+                  <ChevronRight className="w-4 h-4 text-muted-foreground/70 group-hover:text-white transition-colors" />
                 </button>
               ))}
             </div>
@@ -227,13 +227,13 @@ export default function FeedPage() {
           <section className="mb-8">
             <div className="flex items-center gap-2 mb-4">
               <Trophy className="w-4 h-4 text-orange-500" />
-              <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">My Wingman Rank</h2>
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">My Wingman Rank</h2>
             </div>
-            <div className="rounded-[1.5rem] border border-black/5 bg-background p-5 shadow-[0_16px_45px_-30px_rgba(119,77,24,0.30)]">
+            <div className="rounded-[1.5rem] border border-black/5 bg-card p-5 shadow-[0_16px_45px_-30px_rgba(119,77,24,0.30)]">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <p className="text-xl font-display font-extrabold text-slate-900">{myRank.tier}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xl font-display font-extrabold text-foreground">{myRank.tier}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     {Math.round((myRank.acceptRate ?? 0.5) * 100)}% of your likes get accepted
                   </p>
                 </div>
@@ -250,8 +250,8 @@ export default function FeedPage() {
                   { label: 'Assists', value: myRank.assists ?? 0 },
                 ].map((stat) => (
                   <div key={stat.label}>
-                    <p className="font-bold text-slate-800">{stat.value}</p>
-                    <p className="text-[11px] text-slate-400">{stat.label}</p>
+                    <p className="font-bold text-foreground">{stat.value}</p>
+                    <p className="text-[11px] text-muted-foreground">{stat.label}</p>
                   </div>
                 ))}
               </div>
@@ -259,12 +259,12 @@ export default function FeedPage() {
 
             {/* Crew leaderboard: my wingmen, ranked by score */}
             {crew.length > 0 && (
-              <div className="mt-3 rounded-[1.5rem] border border-black/5 bg-background p-4 shadow-[0_14px_40px_-28px_rgba(119,77,24,0.25)]">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">My crew</p>
+              <div className="mt-3 rounded-[1.5rem] border border-black/5 bg-card p-4 shadow-[0_14px_40px_-28px_rgba(119,77,24,0.25)]">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">My crew</p>
                 <div className="space-y-2">
                   {crew.map((entry, position) => (
                     <div key={entry.wingman?._id || position} className="flex items-center gap-3">
-                      <span className="w-5 text-center text-sm font-bold text-slate-400">{position + 1}</span>
+                      <span className="w-5 text-center text-sm font-bold text-muted-foreground">{position + 1}</span>
                       <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-500 flex items-center justify-center flex-shrink-0">
                         {entry.wingman?.photo ? (
                           <img src={entry.wingman.photo} alt={entry.wingman.name} className="w-full h-full object-cover" />
@@ -273,8 +273,8 @@ export default function FeedPage() {
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-700 truncate">{entry.wingman?.name}</p>
-                        <p className="text-[11px] text-slate-400">{entry.tier} · {entry.confirmedMatches ?? 0} matches made</p>
+                        <p className="text-sm font-semibold text-foreground truncate">{entry.wingman?.name}</p>
+                        <p className="text-[11px] text-muted-foreground">{entry.tier} · {entry.confirmedMatches ?? 0} matches made</p>
                       </div>
                       <span className="inline-flex items-center gap-1 rounded-full bg-[#e0447f] px-2.5 py-1 text-xs font-bold text-white">
                         <Flame className="w-3 h-3" />
@@ -299,16 +299,16 @@ export default function FeedPage() {
 
       {/* Bottom Navigation */}
       <div className="border-t border-black/5 px-4 py-4 sticky bottom-0 bg-background">
-        <div className="max-w-lg mx-auto flex items-center gap-2 rounded-[1.75rem] border border-black/5 bg-background px-3 py-3 warm-nav-shell">
+        <div className="max-w-lg mx-auto flex items-center gap-2 rounded-[1.75rem] border border-black/5 bg-card px-3 py-3 warm-nav-shell">
           <Link href="/feed" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-white bg-black/20">
             <Flame className="w-6 h-6" />
             <span className="text-xs font-medium">Feed</span>
           </Link>
-          <Link href="/matches" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-slate-400 hover:text-slate-700 relative">
+          <Link href="/matches" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-white/60 hover:text-white relative">
             <Heart className="w-6 h-6" />
             <span className="text-xs">Matches</span>
           </Link>
-          <Link href="/chat" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-slate-400 hover:text-slate-700">
+          <Link href="/chat" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-white/60 hover:text-white">
             <MessageCircle className="w-6 h-6" />
             <span className="text-xs">Chats</span>
           </Link>

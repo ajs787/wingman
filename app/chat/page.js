@@ -48,17 +48,17 @@ function ChatPreview({ chat, onClick }) {
       {/* Content */}
       <div className="flex-1 min-w-0 text-left">
         <div className="flex items-center justify-between gap-2">
-          <h3 className={`font-semibold truncate ${chat.unreadCount > 0 ? 'text-slate-900' : 'text-slate-700'}`}>
+          <h3 className={`font-semibold truncate ${chat.unreadCount > 0 ? 'text-foreground' : 'text-foreground/90'}`}>
             {chat.otherUser.name}
           </h3>
-          <span className="text-xs text-slate-400 flex-shrink-0">{timeAgo(chat.updatedAt)}</span>
+          <span className="text-xs text-muted-foreground flex-shrink-0">{timeAgo(chat.updatedAt)}</span>
         </div>
         {chat.lastMessage ? (
-          <p className={`text-sm truncate ${chat.unreadCount > 0 ? 'text-slate-700 font-medium' : 'text-slate-500'}`}>
+          <p className={`text-sm truncate ${chat.unreadCount > 0 ? 'text-foreground/90 font-medium' : 'text-muted-foreground'}`}>
             {chat.lastMessage.isMe ? 'You: ' : ''}{chat.lastMessage.content}
           </p>
         ) : (
-          <p className="text-sm text-slate-400 italic">Start the conversation</p>
+          <p className="text-sm text-muted-foreground italic">Start the conversation</p>
         )}
       </div>
     </button>
@@ -95,8 +95,8 @@ export default function ChatListPage() {
             </Button>
           </Link>
           <div className="flex-1">
-            <h1 className="text-xl font-display font-bold text-slate-900">Messages</h1>
-            <p className="text-xs text-slate-400">Chat with your matches</p>
+            <h1 className="text-xl font-display font-bold text-foreground">Messages</h1>
+            <p className="text-xs text-muted-foreground">Chat with your matches</p>
           </div>
           <Link href="/matches">
             <Button variant="outline" size="sm" className="gap-2">
@@ -113,19 +113,19 @@ export default function ChatListPage() {
           <div className="p-6 space-y-4">
             {[1, 2, 3].map((i) => (
               <div key={i} className="flex items-center gap-4 p-4">
-                <div className="w-14 h-14 rounded-full bg-slate-100 animate-pulse" />
+                <div className="w-14 h-14 rounded-full bg-white/10 animate-pulse" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-4 w-24 bg-slate-100 rounded animate-pulse" />
-                  <div className="h-3 w-40 bg-slate-100 rounded animate-pulse" />
+                  <div className="h-4 w-24 bg-white/10 rounded animate-pulse" />
+                  <div className="h-3 w-40 bg-white/10 rounded animate-pulse" />
                 </div>
               </div>
             ))}
           </div>
         ) : chats.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
-            <MessageCircle className="w-12 h-12 text-slate-300 mb-4" />
-            <h2 className="text-lg font-semibold text-slate-700 mb-2">No conversations yet</h2>
-            <p className="text-sm text-slate-500 mb-6">
+            <MessageCircle className="w-12 h-12 text-muted-foreground/70 mb-4" />
+            <h2 className="text-lg font-semibold text-foreground/90 mb-2">No conversations yet</h2>
+            <p className="text-sm text-muted-foreground mb-6">
               Accept a match to start chatting
             </p>
             <Link href="/matches">
@@ -150,12 +150,12 @@ export default function ChatListPage() {
 
       {/* Bottom Navigation */}
       <div className="border-t border-black/5 px-4 py-4 sticky bottom-0 bg-background">
-        <div className="max-w-lg mx-auto flex items-center gap-2 rounded-[1.75rem] border border-black/5 bg-background px-3 py-3 warm-nav-shell">
-          <Link href="/feed" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-slate-400 hover:text-slate-700">
+        <div className="max-w-lg mx-auto flex items-center gap-2 rounded-[1.75rem] border border-black/5 bg-card px-3 py-3 warm-nav-shell">
+          <Link href="/feed" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-white/60 hover:text-white">
             <Flame className="w-6 h-6" />
             <span className="text-xs">Feed</span>
           </Link>
-          <Link href="/matches" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-slate-400 hover:text-slate-700">
+          <Link href="/matches" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-white/60 hover:text-white">
             <Heart className="w-6 h-6" />
             <span className="text-xs">Matches</span>
           </Link>
