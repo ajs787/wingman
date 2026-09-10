@@ -30,6 +30,12 @@ function AuthForm() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [googleReady, setGoogleReady] = useState(false);
+  // Forgot-password flow: '' (off) -> 'request' (enter netid) -> 'confirm' (code + new password)
+  const [resetStep, setResetStep] = useState('');
+  const [resetCode, setResetCode] = useState('');
+  const [resetPassword, setResetPassword] = useState('');
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [resetNotice, setResetNotice] = useState('');
 
   // Initialize Google Sign-In after script loads
   const handleGoogleScriptLoad = () => {
@@ -93,6 +99,98 @@ function AuthForm() {
     setPendingVerificationEmail('');
     setVerificationCode('');
     setVerificationNotice('');
+    setResetStep('');
+    setResetCode('');
+    setResetPassword('');
+    setResetNotice('');
+  }
+
+  function openReset() {
+    setError('');
+    setResetNotice('');
+    setResetCode('');
+    setResetPassword('');
+    setResetStep('request');
+  }
+
+  function exitReset() {
+    setResetStep('');
+    setResetCode('');
+    setResetPassword('');
+    setResetNotice('');
+    setError('');
+  }
+
+  async function handleResetRequest(e) {
+    e.preventDefault();
+    setError('');
+    setResetNotice('');
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/password/request-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Could not send a reset code. Please try again.');
+        return;
+      }
+
+      // Dev convenience: prefill the code when SendGrid isn't configured locally.
+      if (data.devResetCode) setResetCode(data.devResetCode);
+      setResetNotice(`If an account exists for ${email.trim().toLowerCase()}, a 6-digit reset code is on its way.`);
+      setResetStep('confirm');
+    } catch {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleResetConfirm(e) {
+    e.preventDefault();
+    setError('');
+    setResetNotice('');
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/password/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          code: resetCode,
+          password: resetPassword,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Could not reset your password.');
+        return;
+      }
+
+      localStorage.setItem('wingman_user', JSON.stringify({
+        userId: data.userId,
+        email: data.email,
+        netid: data.netid,
+      }));
+
+      const next = searchParams.get('next');
+      if (next && next.startsWith('/')) {
+        router.push(next);
+      } else if (data.hasProfile) {
+        router.push('/feed');
+      } else {
+        router.push('/onboarding');
+      }
+    } catch {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleEmailVerify(e) {
@@ -299,7 +397,126 @@ function AuthForm() {
           </form>
         )}
 
-        {!pendingVerificationEmail && (
+        {!pendingVerificationEmail && resetStep === 'request' && (
+          <form onSubmit={handleResetRequest} className="space-y-4">
+            <h1 className="text-2xl font-bold text-slate-900 text-center mb-1">Reset your password</h1>
+            <p className="text-slate-400 text-center text-sm mb-6">
+              Enter your Rutgers NetID and we&apos;ll email you a 6-digit reset code.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="reset-netid">School email</Label>
+              <div className="flex h-12 w-full items-center overflow-hidden rounded-xl border border-input bg-background ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+                <input
+                  id="reset-netid"
+                  type="text"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  autoComplete="username"
+                  placeholder="netid"
+                  value={email.replace(/@scarletmail\.rutgers\.edu$/, '')}
+                  onChange={(e) => {
+                    const id = e.target.value.replace(/@.*/, '').trim().toLowerCase();
+                    setEmail(id ? `${id}@scarletmail.rutgers.edu` : '');
+                  }}
+                  required
+                  className="min-w-0 flex-1 bg-transparent px-4 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                />
+                <span className="select-none whitespace-nowrap border-l border-input px-3 text-xs text-muted-foreground">
+                  @scarletmail.rutgers.edu
+                </span>
+              </div>
+            </div>
+            {error && (
+              <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-xl border border-red-100">
+                {error}
+              </div>
+            )}
+            <Button type="submit" size="lg" className="w-full" disabled={loading || !email}>
+              {loading ? 'Sending…' : 'Send reset code'}
+            </Button>
+            <button
+              type="button"
+              onClick={exitReset}
+              className="w-full text-sm text-slate-500 hover:text-slate-700"
+            >
+              Back to login
+            </button>
+          </form>
+        )}
+
+        {!pendingVerificationEmail && resetStep === 'confirm' && (
+          <form onSubmit={handleResetConfirm} className="space-y-4">
+            <h1 className="text-2xl font-bold text-slate-900 text-center mb-1">Check your email</h1>
+            <p className="text-slate-400 text-center text-sm mb-6">
+              Enter the 6-digit code we sent, then choose a new password.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="reset-code">Reset code</Label>
+              <Input
+                id="reset-code"
+                type="text"
+                inputMode="numeric"
+                placeholder="000000"
+                value={resetCode}
+                onChange={(e) => setResetCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                maxLength="6"
+                required
+                className="h-12 text-center text-lg font-mono tracking-widest"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reset-password">New password</Label>
+              <div className="relative">
+                <Input
+                  id="reset-password"
+                  type={showResetPassword ? 'text' : 'password'}
+                  placeholder="At least 8 characters"
+                  value={resetPassword}
+                  onChange={(e) => setResetPassword(e.target.value)}
+                  required
+                  autoComplete="new-password"
+                  className="h-12 pr-12"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowResetPassword(!showResetPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  {showResetPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+              <p className="text-xs text-slate-500 mt-2">
+                Must contain: 8+ chars, uppercase, lowercase, special character (!@#$%^&amp;*)
+              </p>
+            </div>
+            {resetNotice && (
+              <div className="bg-slate-50 text-slate-700 text-sm px-4 py-3 rounded-xl border border-slate-100">
+                {resetNotice}
+              </div>
+            )}
+            {error && (
+              <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-xl border border-red-100">
+                {error}
+              </div>
+            )}
+            <Button type="submit" size="lg" className="w-full" disabled={loading || resetCode.length !== 6 || !resetPassword}>
+              {loading ? 'Resetting…' : 'Reset password'}
+            </Button>
+            <Button type="button" variant="outline" size="lg" className="w-full" onClick={handleResetRequest} disabled={loading}>
+              Resend code
+            </Button>
+            <button
+              type="button"
+              onClick={exitReset}
+              className="w-full text-sm text-slate-500 hover:text-slate-700"
+            >
+              Back to login
+            </button>
+          </form>
+        )}
+
+        {!pendingVerificationEmail && !resetStep && (
         <>
 
         {/* Mode toggle */}
@@ -364,7 +581,18 @@ function AuthForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Password</Label>
+              {!isSignup && (
+                <button
+                  type="button"
+                  onClick={openReset}
+                  className="text-xs font-medium text-primary-foreground/80 hover:text-primary-foreground hover:underline"
+                >
+                  Forgot password?
+                </button>
+              )}
+            </div>
             <div className="relative">
               <Input
                 id="password"
