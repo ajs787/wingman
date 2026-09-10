@@ -9,26 +9,28 @@
     --font-display: 'Poppins';
     --font-body: 'Poppins';
     --font-mono: 'DM Mono';
-    /* Hot pink canvas, white + light-pink text (light mode) */
-    --background: 337 72% 57%;
+    /* Softened rose canvas, white + light-pink text (light mode) — toned down
+       from the original hot pink: saturation lowered, lightness kept so white
+       text keeps the same contrast. */
+    --background: 338 52% 58%;
     --foreground: 0 0% 100%;
-    /* Surfaces are a darker pink so white text reads and cards separate */
-    --card: 337 64% 46%;
+    /* Surfaces are a darker rose so white text reads and cards separate */
+    --card: 338 46% 47%;
     --card-foreground: 0 0% 100%;
-    --popover: 337 64% 46%;
+    --popover: 338 46% 47%;
     --popover-foreground: 0 0% 100%;
     --primary: 0 0% 10%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 337 56% 44%;
+    --secondary: 338 40% 45%;
     --secondary-foreground: 0 0% 100%;
-    --muted: 337 56% 44%;
-    --muted-foreground: 338 95% 91%;
-    --accent: 337 56% 44%;
+    --muted: 338 40% 45%;
+    --muted-foreground: 338 70% 92%;
+    --accent: 338 40% 45%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 80% 55%;
     --destructive-foreground: 0 0% 100%;
-    --border: 338 62% 71%;
-    --input: 336 42% 26%;
+    --border: 338 44% 72%;
+    --input: 336 34% 28%;
     --ring: 0 0% 100%;
     --radius: 1.25rem;
   }

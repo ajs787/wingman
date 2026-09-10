@@ -229,9 +229,9 @@ function AuthForm() {
         onLoad={handleGoogleScriptLoad}
       />
 
-      {/* Back button */}
-      <div className="w-full max-w-sm mx-auto pt-6">
-        <Link href="/" className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-700 transition-colors">
+      {/* Back button — pinned to the top-left corner */}
+      <div className="w-full pt-6">
+        <Link href="/" className="inline-flex items-center gap-2 text-primary-foreground/70 hover:text-primary-foreground transition-colors">
           <ArrowLeft className="w-5 h-5" />
           <span className="text-sm font-medium">Back</span>
         </Link>
@@ -335,18 +335,31 @@ function AuthForm() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">School email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@rutgers.edu"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-              className="h-12"
-            />
+            {/* NetID field: user types only their netid; the ScarletMail suffix
+                is fixed and appended automatically to form the full email. */}
+            <div className="flex h-12 w-full items-center overflow-hidden rounded-xl border border-input bg-background ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+              <input
+                id="email"
+                type="text"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                autoComplete="username"
+                placeholder="netid"
+                value={email.replace(/@scarletmail\.rutgers\.edu$/, '')}
+                onChange={(e) => {
+                  const id = e.target.value.replace(/@.*/, '').trim().toLowerCase();
+                  setEmail(id ? `${id}@scarletmail.rutgers.edu` : '');
+                }}
+                required
+                className="min-w-0 flex-1 bg-transparent px-4 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+              />
+              <span className="select-none whitespace-nowrap border-l border-input px-3 text-xs text-muted-foreground">
+                @scarletmail.rutgers.edu
+              </span>
+            </div>
             {isSignup && (
-              <p className="text-xs text-slate-500">Use your .edu college email — we verify it with a code.</p>
+              <p className="text-xs text-primary-foreground/80">Enter your Rutgers NetID — we&apos;ll email a 6-digit code to your ScarletMail.</p>
             )}
           </div>
 
