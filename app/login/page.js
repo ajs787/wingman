@@ -139,7 +139,7 @@ function AuthForm() {
         return;
       }
 
-      // Dev convenience: prefill the code when SendGrid isn't configured locally.
+      // Dev convenience: prefill the code when email isn't configured locally.
       if (data.devResetCode) setResetCode(data.devResetCode);
       setResetNotice(`If an account exists for ${email.trim().toLowerCase()}, a 6-digit reset code is on its way.`);
       setResetStep('confirm');

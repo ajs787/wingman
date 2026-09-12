@@ -76,6 +76,6 @@ export async function POST(request) {
     );
   }
 
-  // In dev with no SendGrid configured, surface the code so the flow is testable.
+  // In dev with no Resend key configured, surface the code so the flow is testable.
   return genericOk(delivery?.devCode ? { devResetCode: delivery.devCode } : {});
 }
