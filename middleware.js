@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server';
 
 // Legal pages must be reachable without auth — App Store Connect and Apple's
 // reviewers need to load the privacy policy and terms without an account.
-const PUBLIC_PATHS = ['/', '/login', '/privacy', '/terms', '/support'];
+// The PWA manifest and service worker must also be public: a visitor installs
+// (or the browser registers the SW) before signing in, so gating these behind
+// auth breaks "Add to Home Screen". Icons are already exempt via the matcher.
+const PUBLIC_PATHS = ['/', '/login', '/privacy', '/terms', '/support', '/manifest.webmanifest', '/sw.js'];
 
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
