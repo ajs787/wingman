@@ -257,8 +257,8 @@ export default function ChatPage() {
                 )}
               </div>
               <div>
-                <h1 className="font-semibold text-slate-900">{otherUser.name}</h1>
-                <p className="text-xs text-slate-400">Your match</p>
+                <h1 className="font-semibold text-foreground">{otherUser.name}</h1>
+                <p className="text-xs text-muted-foreground">Your match</p>
               </div>
             </div>
           )}
@@ -310,12 +310,12 @@ export default function ChatPage() {
         <div className="max-w-lg mx-auto space-y-6">
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <p className="text-slate-400">Loading messages...</p>
+              <p className="text-muted-foreground">Loading messages...</p>
             </div>
           ) : messages.length === 0 ? (
             <div className="text-center py-20">
-              <p className="text-slate-500 mb-2">No messages yet</p>
-              <p className="text-sm text-slate-400">Say hey to start the conversation!</p>
+              <p className="text-foreground mb-2">No messages yet</p>
+              <p className="text-sm text-muted-foreground">Say hey to start the conversation!</p>
             </div>
           ) : (
             Object.entries(groupedMessages).map(([dateKey, dateMessages]) => (
@@ -358,7 +358,7 @@ export default function ChatPage() {
                           </p>
                         </div>
                         {showTime && (
-                          <p className="text-xs mt-1 px-1 text-slate-400 font-mono">
+                          <p className="text-xs mt-1 px-1 text-muted-foreground font-mono">
                             {formatTime(msg.createdAt)}
                           </p>
                         )}

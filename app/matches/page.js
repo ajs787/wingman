@@ -338,8 +338,8 @@ export default function MyMatchesPage() {
             </Button>
           </Link>
           <div className="flex-1">
-            <h1 className="text-xl font-display font-bold text-slate-900">My Matches</h1>
-            <p className="text-xs text-slate-400">Matched for you by your friends</p>
+            <h1 className="text-xl font-display font-bold text-foreground">My Matches</h1>
+            <p className="text-xs text-muted-foreground">Matched for you by your friends</p>
           </div>
         </div>
       </div>
@@ -348,21 +348,21 @@ export default function MyMatchesPage() {
         {loading ? (
           <div className="space-y-4">
             {[1, 2].map((i) => (
-              <div key={i} className="h-64 rounded-3xl bg-slate-100 animate-pulse" />
+              <div key={i} className="h-64 rounded-3xl bg-white/10 animate-pulse" />
             ))}
           </div>
         ) : matches.length === 0 ? (
           <div className="text-center py-16">
             <Heart className="w-10 h-10 text-orange-300 mx-auto mb-4" />
-            <p className="text-slate-500 font-medium">No matches yet</p>
-            <p className="text-slate-400 text-sm mt-1">Your matches will appear here once a friend swipes for you.</p>
+            <p className="text-foreground font-medium">No matches yet</p>
+            <p className="text-muted-foreground text-sm mt-1">Your matches will appear here once a friend swipes for you.</p>
           </div>
         ) : (
           <>
             {/* Pending matches */}
             {pendingMatches.length > 0 && (
               <section>
-                <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
                   New Matches ({pendingMatches.length})
                 </h2>
                 <div className="space-y-6">
@@ -390,7 +390,7 @@ export default function MyMatchesPage() {
             {/* Waiting for response */}
             {acceptedMatches.length > 0 && (
               <section>
-                <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-4">
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
                   Waiting ({acceptedMatches.length})
                 </h2>
                 <div className="space-y-6">
@@ -404,7 +404,7 @@ export default function MyMatchesPage() {
             {/* Rejected */}
             {rejectedMatches.length > 0 && (
               <section>
-                <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wide mb-4">
+                <h2 className="text-sm font-semibold text-muted-foreground/70 uppercase tracking-wide mb-4">
                   Passed ({rejectedMatches.length})
                 </h2>
                 <div className="space-y-6">
@@ -420,8 +420,8 @@ export default function MyMatchesPage() {
 
       {/* Bottom Navigation */}
       <div className="border-t border-black/5 px-4 py-4 fixed bottom-0 left-0 right-0 bg-background">
-        <div className="max-w-lg mx-auto flex items-center gap-2 rounded-[1.75rem] border border-black/5 bg-background px-3 py-3 warm-nav-shell">
-          <Link href="/feed" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-slate-400 hover:text-slate-700">
+        <div className="max-w-lg mx-auto flex items-center gap-2 rounded-[1.75rem] border border-black/5 bg-card px-3 py-3 warm-nav-shell">
+          <Link href="/feed" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-white/60 hover:text-white">
             <Flame className="w-6 h-6" />
             <span className="text-xs">Feed</span>
           </Link>
@@ -429,7 +429,7 @@ export default function MyMatchesPage() {
             <Heart className="w-6 h-6" />
             <span className="text-xs font-medium">Matches</span>
           </Link>
-          <Link href="/chat" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-slate-400 hover:text-slate-700">
+          <Link href="/chat" className="warm-nav-link flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-white/60 hover:text-white">
             <MessageCircle className="w-6 h-6" />
             <span className="text-xs">Chats</span>
           </Link>
