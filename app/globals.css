@@ -173,14 +173,42 @@
   box-shadow: 3px 3px 0 hsl(0 0% 0% / 0.55);
 }
 
-/* Neobrutalist pop for primary CTAs — hard offset shadow + solid border. */
+/* Neobrutalist pop for primary CTAs — hard offset shadow + solid border that
+   lifts on hover and presses in on click. */
 .btn-pop {
-  border: 2px solid hsl(344 55% 12%);
-  box-shadow: 3px 3px 0 hsl(344 55% 12%);
+  border: 2px solid hsl(344 60% 11%);
+  box-shadow: 3px 3px 0 hsl(344 60% 11%);
   transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
 }
-.btn-pop:hover { filter: brightness(1.03); }
-.btn-pop:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 hsl(344 55% 12%); }
+.btn-pop:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 hsl(344 60% 11%); filter: brightness(1.04); }
+.btn-pop:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 hsl(344 60% 11%); }
+.btn-pop:disabled,
+.btn-pop:disabled:hover {
+  box-shadow: 2px 2px 0 hsl(344 30% 30%);
+  transform: none;
+  filter: none;
+}
+
+/* Neobrutalist card — solid border + hard offset shadow. Add .card-lift for a
+   hover interaction on tappable cards. */
+.card-pop {
+  border: 2px solid hsl(344 58% 13%);
+  box-shadow: 4px 4px 0 hsl(344 58% 13%);
+}
+.dark .card-pop {
+  border-color: hsl(0 0% 0% / 0.55);
+  box-shadow: 4px 4px 0 hsl(0 0% 0% / 0.55);
+}
+.card-lift {
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+.card-lift:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 6px 6px 0 hsl(344 58% 13%);
+}
+.dark .card-lift:hover {
+  box-shadow: 6px 6px 0 hsl(0 0% 0% / 0.55);
+}
 
 /* Card polish */
 .card-swipe {

@@ -119,7 +119,7 @@ export default function FeedPage() {
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">My Matches</h2>
           </div>
           <Link href="/matches">
-            <div className="flex items-center justify-between p-4 rounded-[1.5rem] border border-black/5 bg-card shadow-[0_16px_45px_-30px_rgba(119,77,24,0.30)] hover:border-white/20 hover:bg-white/5 transition-all group cursor-pointer">
+            <div className="flex items-center justify-between p-4 rounded-[1.5rem] bg-card card-pop card-lift hover:bg-white/5 group cursor-pointer">
               <div className="flex items-center gap-3">
                 <div className="relative">
                   <Heart className="w-8 h-8 text-orange-400" />
@@ -144,7 +144,7 @@ export default function FeedPage() {
           {/* Incoming likes for my wingmen (and me) to review */}
           {myProfile?._id && (
             <Link href={`/likes/${myProfile._id}`}>
-              <div className="mt-3 flex items-center justify-between p-4 rounded-[1.5rem] border border-black/5 bg-card shadow-[0_16px_45px_-30px_rgba(119,77,24,0.30)] hover:border-white/20 hover:bg-white/5 transition-all group cursor-pointer">
+              <div className="mt-3 flex items-center justify-between p-4 rounded-[1.5rem] bg-card card-pop card-lift hover:bg-white/5 group cursor-pointer">
                 <div className="flex items-center gap-3">
                   <div className="relative">
                     <Mail className="w-8 h-8 text-orange-400" />
@@ -195,7 +195,7 @@ export default function FeedPage() {
                 <button
                   key={friend._id}
                   onClick={() => router.push(`/feed/${friend._id}`)}
-                  className="w-full flex items-center justify-between p-4 rounded-[1.5rem] border border-black/5 bg-card hover:border-white/20 hover:bg-white/5 transition-all group shadow-[0_14px_40px_-28px_rgba(119,77,24,0.25)]"
+                  className="w-full flex items-center justify-between p-4 rounded-[1.5rem] bg-card card-pop card-lift hover:bg-white/5 group"
                 >
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-600 flex-shrink-0">
@@ -230,7 +230,7 @@ export default function FeedPage() {
               <Trophy className="w-4 h-4 text-orange-500" />
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">My Wingman Rank</h2>
             </div>
-            <div className="rounded-[1.5rem] border border-black/5 bg-card p-5 shadow-[0_16px_45px_-30px_rgba(119,77,24,0.30)]">
+            <div className="rounded-[1.5rem] bg-card card-pop p-5">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <p className="text-xl font-display font-extrabold text-foreground">{myRank.tier}</p>
@@ -260,7 +260,7 @@ export default function FeedPage() {
 
             {/* Crew leaderboard: my wingmen, ranked by score */}
             {crew.length > 0 && (
-              <div className="mt-3 rounded-[1.5rem] border border-black/5 bg-card p-4 shadow-[0_14px_40px_-28px_rgba(119,77,24,0.25)]">
+              <div className="mt-3 rounded-[1.5rem] bg-card card-pop p-4">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">My crew</p>
                 <div className="space-y-2">
                   {crew.map((entry, position) => (
