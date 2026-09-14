@@ -9,30 +9,33 @@
     --font-display: 'Poppins';
     --font-body: 'Poppins';
     --font-mono: 'DM Mono';
-    /* Softened rose canvas, white + light-pink text (light mode) — toned down
-       from the original hot pink: saturation lowered, lightness kept so white
-       text keeps the same contrast. */
-    --background: 338 52% 58%;
+    /* Deep raspberry-rose canvas (light mode). Darkened from the old medium
+       pink so white text clears WCAG AA (~6:1). White is primary text, a very
+       light pink is secondary; warm peach is the interactive/selected accent. */
+    --background: 342 53% 39%;
     --foreground: 0 0% 100%;
-    /* Surfaces are a darker rose so white text reads and cards separate */
-    --card: 338 46% 47%;
+    /* Elevated surfaces sit a shade deeper so cards separate on the canvas */
+    --card: 343 48% 31%;
     --card-foreground: 0 0% 100%;
-    --popover: 338 46% 47%;
+    --popover: 343 48% 31%;
     --popover-foreground: 0 0% 100%;
     --primary: 0 0% 10%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 338 40% 45%;
+    --secondary: 343 40% 29%;
     --secondary-foreground: 0 0% 100%;
-    --muted: 338 40% 45%;
-    --muted-foreground: 338 70% 92%;
-    --accent: 338 40% 45%;
+    --muted: 343 40% 29%;
+    --muted-foreground: 342 68% 89%;
+    --accent: 343 40% 29%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 80% 55%;
+    --destructive: 0 80% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 338 44% 72%;
-    --input: 336 34% 28%;
-    --ring: 0 0% 100%;
+    --border: 344 34% 50%;
+    --input: 344 36% 26%;
+    --ring: 28 100% 78%;
     --radius: 1.25rem;
+    /* Warm accent — the "light orange/pink" used for selected chips & pops */
+    --peach: 27 100% 86%;
+    --peach-ink: 344 55% 16%;
   }
 
   .dark {
@@ -89,6 +92,18 @@
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-body), 'Poppins', system-ui, sans-serif;
     background-color: hsl(var(--background));
+    /* Faint graph-paper grid (uvalentine-inspired texture). Fixed so it reads
+       as a backdrop, subtle enough not to fight content. */
+    background-image:
+      linear-gradient(hsl(0 0% 100% / 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(0 0% 100% / 0.035) 1px, transparent 1px);
+    background-size: 30px 30px;
+    background-attachment: fixed;
+  }
+  .dark body {
+    background-image:
+      linear-gradient(hsl(0 0% 100% / 0.028) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(0 0% 100% / 0.028) 1px, transparent 1px);
   }
 
   h1,
@@ -131,6 +146,41 @@
 .dark .btn-gradient:hover {
   filter: brightness(1.06);
 }
+
+/* Selectable option chip. Base = outlined on the rose canvas (white text);
+   .chip-selected flips to a warm peach fill with dark ink + a hard offset
+   shadow (neobrutalist). Works in both themes — peach reads on rose & charcoal. */
+.chip {
+  border: 1.5px solid hsl(0 0% 100% / 0.34);
+  color: #fff;
+  background-color: hsl(0 0% 100% / 0.06);
+  transition: transform 140ms ease, background-color 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
+}
+.chip:hover {
+  background-color: hsl(0 0% 100% / 0.13);
+  border-color: hsl(0 0% 100% / 0.5);
+}
+.chip-selected,
+.chip-selected:hover {
+  background-color: hsl(var(--peach));
+  color: hsl(var(--peach-ink));
+  border-color: hsl(var(--peach-ink));
+  box-shadow: 3px 3px 0 hsl(var(--peach-ink));
+  transform: translate(-1px, -1px);
+}
+.dark .chip-selected,
+.dark .chip-selected:hover {
+  box-shadow: 3px 3px 0 hsl(0 0% 0% / 0.55);
+}
+
+/* Neobrutalist pop for primary CTAs — hard offset shadow + solid border. */
+.btn-pop {
+  border: 2px solid hsl(344 55% 12%);
+  box-shadow: 3px 3px 0 hsl(344 55% 12%);
+  transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+}
+.btn-pop:hover { filter: brightness(1.03); }
+.btn-pop:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 hsl(344 55% 12%); }
 
 /* Card polish */
 .card-swipe {
@@ -197,12 +247,12 @@
    light canvas. Remap so text is white / super-light-pink and white surfaces
    become pink (light mode only; dark-mode rules above are untouched). */
 
-/* light surfaces -> darker pink so white text reads on them */
+/* light surfaces -> deep rose so white text reads on them */
 html:not(.dark) .bg-white,
 html:not(.dark) .bg-slate-50,
 html:not(.dark) .bg-slate-100,
 html:not(.dark) .bg-gray-50,
-html:not(.dark) .bg-gray-100 { background-color: hsl(337 64% 46%) !important; }
+html:not(.dark) .bg-gray-100 { background-color: hsl(343 46% 30%) !important; }
 
 /* primary / heading text -> white */
 html:not(.dark) .text-slate-600,

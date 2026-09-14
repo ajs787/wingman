@@ -9,7 +9,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
-import { ArrowLeft, X, Heart, SlidersHorizontal, Cake, Magnet, Ruler, MapPin, Leaf, Pill, School, BookOpen, Brain, Sparkles, Mail } from 'lucide-react';
+import { ArrowLeft, X, Heart, SlidersHorizontal, Cake, Magnet, Ruler, MapPin, School, BookOpen, Sparkles, Mail } from 'lucide-react';
 import { US_COLLEGES, COMMON_MAJORS, CLASS_YEARS, GENDERS, RACE_ETHNICITY_OPTIONS } from '@/lib/constants';
 
 const NOTE_MAX_LENGTH = 300;
@@ -70,9 +70,6 @@ function ProfileCard({ candidate, onPass, onLike, swiping = false }) {
       onLike(null, null);
     }, 1500);
   }
-
-  const smokesValue = candidate.weed_use && !['Never', 'Prefer not to say'].includes(candidate.weed_use) ? 'Yes' : 'No';
-  const drugsValue = candidate.drug_use && !['Never', 'Prefer not to say'].includes(candidate.drug_use) ? 'Yes' : 'No';
 
   return (
     <div className="flex flex-col h-full relative">
@@ -139,14 +136,12 @@ function ProfileCard({ candidate, onPass, onLike, swiping = false }) {
         </div>
 
         <div className="rounded-2xl border border-slate-800 bg-black overflow-hidden">
-          <div className="grid grid-cols-3 sm:grid-cols-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4">
             {[
               { icon: Cake, value: typeof candidate.age === 'number' ? String(candidate.age) : '—' },
               { icon: Magnet, value: candidate.sexuality || '—' },
               { icon: Ruler, value: candidate.height || '—' },
               { icon: MapPin, value: candidate.location || '—' },
-              { icon: Leaf, value: smokesValue },
-              { icon: Pill, value: drugsValue },
             ].map((item, idx) => (
               <div key={`icon-row-${idx}`} className="px-3 py-3 border-r border-b border-slate-800 last:border-r-0">
                 <item.icon className="w-4 h-4 text-slate-300 mb-1" />
@@ -170,12 +165,6 @@ function ProfileCard({ candidate, onPass, onLike, swiping = false }) {
             <div className="px-4 py-3 flex items-center gap-3">
               <BookOpen className="w-4 h-4 text-slate-300" />
               <span className="text-sm font-medium text-white">{candidate.majors?.length ? candidate.majors.join(', ') : (candidate.major || '—')}</span>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 divide-y divide-slate-800 border-t border-slate-800">
-            <div className="px-4 py-3 flex items-center gap-3">
-              <Brain className="w-4 h-4 text-slate-300" />
-              <span className="text-sm font-medium text-white">{candidate.personality_answer || '—'}</span>
             </div>
           </div>
         </div>

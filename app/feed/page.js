@@ -85,6 +85,7 @@ export default function FeedPage() {
             <Wordmark className="text-2xl" />
           </div>
           <div className="flex items-center gap-1">
+            <ThemeToggle />
             <Link href="/settings">
               <Button variant="ghost" size="icon" title="Edit profile">
                 <UserCircle className="w-5 h-5 text-muted-foreground" />

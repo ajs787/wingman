@@ -100,9 +100,6 @@ export default function MatchProfileViewPage() {
               <h2 className="text-base font-semibold text-slate-800">About</h2>
               <p className="text-sm text-slate-700">{person?.name}{person?.age ? `, ${person.age}` : ''}</p>
               <p className="text-sm text-slate-500">{person?.school || person?.year} · {person?.majors?.join(', ') || person?.major}</p>
-              {person?.personality_answer && (
-                <p className="text-sm text-slate-600">Personality: {person.personality_answer}</p>
-              )}
             </div>
 
             {person?.hidden_prompt && person?.hidden_prompt_answer && (
