@@ -12,18 +12,11 @@ import { useToast } from '@/components/ui/use-toast';
 import { useDropzone } from 'react-dropzone';
 import { ArrowLeft, Upload, X, GripVertical, Check, Copy, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
-import { CUISINE_OPTIONS, RACE_ETHNICITY_OPTIONS, SUBSTANCE_USE_OPTIONS, SEXUALITY_OPTIONS, PROFILE_PROMPTS } from '@/lib/constants';
+import { RACE_ETHNICITY_OPTIONS, SEXUALITY_OPTIONS, PROFILE_PROMPTS } from '@/lib/constants';
 
 const YEARS = ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Graduate', 'Other'];
 const GENDERS = ['Man', 'Woman', 'Non-binary', 'Prefer not to say', 'Other'];
 const LOOKING_FOR = ['Men', 'Women', 'Everyone', 'Non-binary people'];
-const PERSONALITY_OPTIONS = [
-  'Early bird 🌅',
-  'Night owl 🦉',
-  'Introvert 🏡',
-  'Extrovert 🎉',
-  'Ambivert ⚖️',
-];
 
 function PhotoSlot({ index, photo, onUpload, onRemove }) {
   const onDrop = useCallback((files) => {
@@ -95,15 +88,10 @@ export default function SettingsPage() {
   const [location, setLocation] = useState('');
   const [job, setJob] = useState('');
   const [religion, setReligion] = useState('');
-  const [personalityAnswer, setPersonalityAnswer] = useState('');
   const [hiddenPrompt, setHiddenPrompt] = useState('');
   const [hiddenPromptAnswer, setHiddenPromptAnswer] = useState('');
-  const [favoriteCuisines, setFavoriteCuisines] = useState([]);
   const [raceEthnicities, setRaceEthnicities] = useState([]);
   const [raceEthnicityToAdd, setRaceEthnicityToAdd] = useState('');
-  const [alcoholUse, setAlcoholUse] = useState('');
-  const [weedUse, setWeedUse] = useState('');
-  const [drugUse, setDrugUse] = useState('');
 
   // Photos: each slot is null | { url } | { file, dataUrl }
   const [photos, setPhotos] = useState(Array(5).fill(null));
@@ -138,18 +126,9 @@ export default function SettingsPage() {
         if (profile.location) setLocation(profile.location);
         if (profile.job) setJob(profile.job);
         if (profile.religion) setReligion(profile.religion);
-        if (profile.personality_answer) setPersonalityAnswer(profile.personality_answer);
         if (profile.hidden_prompt) setHiddenPrompt(profile.hidden_prompt);
         if (profile.hidden_prompt_answer) setHiddenPromptAnswer(profile.hidden_prompt_answer);
-        if (Array.isArray(profile.favorite_cuisines) && profile.favorite_cuisines.length) {
-          setFavoriteCuisines(profile.favorite_cuisines.slice(0, 3));
-        } else if (profile.favorite_cuisine) {
-          setFavoriteCuisines([profile.favorite_cuisine]);
-        }
         if (profile.race_ethnicities?.length) setRaceEthnicities(profile.race_ethnicities);
-        if (profile.alcohol_use) setAlcoholUse(profile.alcohol_use);
-        if (profile.weed_use) setWeedUse(profile.weed_use);
-        if (profile.drug_use) setDrugUse(profile.drug_use);
         if (profile.photos?.length) {
           const slots = Array(5).fill(null);
           profile.photos.forEach((p) => {
@@ -255,15 +234,9 @@ export default function SettingsPage() {
           location: location.trim() || null,
           job: job.trim() || null,
           religion: religion.trim() || null,
-          personality_answer: personalityAnswer || null,
           hidden_prompt: hiddenPrompt || null,
           hidden_prompt_answer: hiddenPrompt ? (hiddenPromptAnswer.trim() || null) : null,
-          favorite_cuisine: favoriteCuisines[0] || null,
-          favorite_cuisines: favoriteCuisines,
           race_ethnicities: raceEthnicities,
-          alcohol_use: alcoholUse || null,
-          weed_use: weedUse || null,
-          drug_use: drugUse || null,
         }),
       });
       if (!profileRes.ok) {
@@ -295,14 +268,6 @@ export default function SettingsPage() {
   }
 
   const photoCount = photos.filter(Boolean).length;
-
-  function toggleCuisine(cuisine) {
-    setFavoriteCuisines((prev) => {
-      if (prev.includes(cuisine)) return prev.filter((item) => item !== cuisine);
-      if (prev.length >= 3) return prev;
-      return [...prev, cuisine];
-    });
-  }
 
   function toggleRaceEthnicity(option) {
     if (!option) return;
@@ -444,7 +409,7 @@ export default function SettingsPage() {
             <div className="flex flex-wrap gap-2">
               {GENDERS.map((g) => (
                 <button key={g} type="button" onClick={() => setGender(g)}
-                  className={`px-4 py-2 rounded-xl border text-sm font-medium transition-colors ${gender === g ? 'bg-black text-white border-gray-500' : 'border-slate-200 text-slate-600 hover:border-gray-300'}`}>
+                  className={`px-4 py-2 rounded-xl text-sm font-medium chip ${gender === g ? 'chip-selected' : ''}`}>
                   {g}
                 </button>
               ))}
@@ -455,7 +420,7 @@ export default function SettingsPage() {
             <div className="flex flex-wrap gap-2">
               {LOOKING_FOR.map((l) => (
                 <button key={l} type="button" onClick={() => setLookingFor(l)}
-                  className={`px-4 py-2 rounded-xl border text-sm font-medium transition-colors ${lookingFor === l ? 'bg-black text-white border-gray-500' : 'border-slate-200 text-slate-600 hover:border-gray-300'}`}>
+                  className={`px-4 py-2 rounded-xl text-sm font-medium chip ${lookingFor === l ? 'chip-selected' : ''}`}>
                   {l}
                 </button>
               ))}
@@ -474,43 +439,10 @@ export default function SettingsPage() {
 
         <hr className="border-slate-100" />
 
-        {/* Personality + cuisine + identity */}
-        <section>
-          <h2 className="text-base font-semibold text-slate-800 mb-4">Personality &amp; lifestyle</h2>
-          <div className="space-y-3 mb-5">
-            {PERSONALITY_OPTIONS.map((opt) => (
-              <button key={opt} type="button" onClick={() => setPersonalityAnswer(opt)}
-                className={`w-full text-left px-5 py-3.5 rounded-2xl border-2 text-sm font-medium transition-all ${personalityAnswer === opt ? 'border-gray-500 bg-gray-50 text-rose-700' : 'border-slate-100 text-slate-700 hover:border-slate-200 bg-white'}`}>
-                <div className="flex items-center justify-between">
-                  {opt}
-                  {personalityAnswer === opt && <Check className="w-4 h-4 text-black" />}
-                </div>
-              </button>
-            ))}
-          </div>
-
-          <div className="space-y-3 mb-5">
-            <Label>Favorite cuisine(s) <span className="text-slate-400 font-normal">(optional, 1-3)</span></Label>
-            <div className="grid grid-cols-2 gap-2">
-              {CUISINE_OPTIONS.map((cuisine) => (
-                <button
-                  key={cuisine}
-                  type="button"
-                  onClick={() => toggleCuisine(cuisine)}
-                  className={`px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all ${favoriteCuisines.includes(cuisine) ? 'border-gray-500 bg-gray-50 text-slate-800' : 'border-slate-100 text-slate-700 hover:border-slate-200 bg-white'}`}
-                >
-                  <div className="flex items-center justify-between">
-                    {cuisine}
-                    {favoriteCuisines.includes(cuisine) && <Check className="w-3 h-3 text-black" />}
-                  </div>
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-slate-400">{favoriteCuisines.length}/3 selected</p>
-          </div>
-
-          <div className="space-y-3 mb-5">
-            <Label>Race &amp; ethnicity <span className="text-slate-400 font-normal">(optional, select all that apply)</span></Label>
+        {/* Identity */}
+        <section className="space-y-4">
+          <h2 className="text-base font-semibold text-slate-800">Race &amp; ethnicity <span className="text-sm font-normal text-slate-400">(optional)</span></h2>
+          <div className="space-y-3">
             <Select value={raceEthnicityToAdd} onValueChange={toggleRaceEthnicity}>
               <SelectTrigger className="bg-white"><SelectValue placeholder="Choose a race/ethnicity" /></SelectTrigger>
               <SelectContent className="max-h-60">
@@ -528,39 +460,6 @@ export default function SettingsPage() {
                   </button>
                 </span>
               ))}
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <Label>Drugs, weed, or alcohol use <span className="text-slate-400 font-normal">(optional)</span></Label>
-            <div className="space-y-3">
-              <div>
-                <Label>Alcohol</Label>
-                <Select value={alcoholUse} onValueChange={setAlcoholUse}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select alcohol use" /></SelectTrigger>
-                  <SelectContent>
-                    {SUBSTANCE_USE_OPTIONS.map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Weed</Label>
-                <Select value={weedUse} onValueChange={setWeedUse}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select weed use" /></SelectTrigger>
-                  <SelectContent>
-                    {SUBSTANCE_USE_OPTIONS.map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Drugs</Label>
-                <Select value={drugUse} onValueChange={setDrugUse}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select drug use" /></SelectTrigger>
-                  <SelectContent>
-                    {SUBSTANCE_USE_OPTIONS.map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
           </div>
         </section>

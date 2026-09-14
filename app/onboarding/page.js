@@ -20,14 +20,10 @@ import {
   AGES,
   GENDERS,
   LOOKING_FOR,
-  PERSONALITY_OPTIONS,
-  CUISINE_OPTIONS,
-  RACE_ETHNICITY_OPTIONS,
-  SUBSTANCE_USE_OPTIONS,
   PROFILE_PROMPTS,
 } from '@/lib/constants';
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 4;
 
 function PhotoSlot({ index, photo, onUpload, onRemove }) {
   const onDrop = useCallback((files) => {
@@ -105,19 +101,10 @@ export default function OnboardingPage() {
   const [gender, setGender] = useState('');
   const [lookingFor, setLookingFor] = useState('');
 
-  // Step 2 — Personality & Cuisine
-  const [personalityAnswer, setPersonalityAnswer] = useState('');
-  const [favoriteCuisines, setFavoriteCuisines] = useState([]);
-  const [raceEthnicities, setRaceEthnicities] = useState([]);
-  const [raceEthnicityToAdd, setRaceEthnicityToAdd] = useState('');
-  const [alcoholUse, setAlcoholUse] = useState('');
-  const [weedUse, setWeedUse] = useState('');
-  const [drugUse, setDrugUse] = useState('');
-
-  // Step 3 — Photos (5 slots)
+  // Step 2 — Photos (5 slots)
   const [photos, setPhotos] = useState(Array(5).fill(null));
 
-  // Step 4 — Prompts (exactly 3 required)
+  // Step 3 — Prompts (exactly 3 required)
   const [promptSelections, setPromptSelections] = useState([
     { prompt: '', answer: '' },
     { prompt: '', answer: '' },
@@ -141,16 +128,6 @@ export default function OnboardingPage() {
         if (profile.minors?.length) setMinors(profile.minors);
         if (profile.gender) setGender(profile.gender);
         if (profile.looking_for) setLookingFor(profile.looking_for);
-        if (profile.personality_answer) setPersonalityAnswer(profile.personality_answer);
-        if (Array.isArray(profile.favorite_cuisines) && profile.favorite_cuisines.length) {
-          setFavoriteCuisines(profile.favorite_cuisines.slice(0, 3));
-        } else if (profile.favorite_cuisine) {
-          setFavoriteCuisines([profile.favorite_cuisine]);
-        }
-        if (profile.race_ethnicities?.length) setRaceEthnicities(profile.race_ethnicities);
-        if (profile.alcohol_use) setAlcoholUse(profile.alcohol_use);
-        if (profile.weed_use) setWeedUse(profile.weed_use);
-        if (profile.drug_use) setDrugUse(profile.drug_use);
       } catch {
         // ignore
       }
@@ -164,12 +141,9 @@ export default function OnboardingPage() {
     return firstName.trim() && lastName.trim() && age && hasSchool && year && hasOneMajor && gender && lookingFor;
   }
   function canProceedStep2() {
-    return true;
-  }
-  function canProceedStep3() {
     return photos.filter((p) => p?.file || p?.existing).length === 5;
   }
-  function canProceedStep4() {
+  function canProceedStep3() {
     return promptSelections.every((p) => p.prompt && p.answer.trim().length > 0);
   }
 
@@ -177,8 +151,8 @@ export default function OnboardingPage() {
   // surface exactly what's missing instead of leaving them to guess.
   function stepBlockedReason() {
     if (step === 1 && !canProceedStep1()) return 'Add your name, school, major, year, and who you’re looking for.';
-    if (step === 3 && !canProceedStep3()) return 'Add all 5 photos to continue.';
-    if (step === 4 && !canProceedStep4()) return 'Answer all your prompts to continue.';
+    if (step === 2 && !canProceedStep2()) return 'Add all 5 photos to continue.';
+    if (step === 3 && !canProceedStep3()) return 'Answer all your prompts to continue.';
     return null;
   }
 
@@ -227,7 +201,7 @@ export default function OnboardingPage() {
   }
 
   async function handleFinish() {
-    if (!canProceedStep4()) {
+    if (!canProceedStep3()) {
       toast({ title: 'Finish all prompts', description: 'Please complete all 3 prompts before signing up.', variant: 'destructive' });
       return;
     }
@@ -255,13 +229,6 @@ export default function OnboardingPage() {
           major: finalMajors[0] || '', // backwards compat
           gender,
           looking_for: lookingFor,
-          personality_answer: personalityAnswer.trim() || null,
-          favorite_cuisine: favoriteCuisines[0] || null,
-          favorite_cuisines: favoriteCuisines,
-          race_ethnicities: raceEthnicities,
-          alcohol_use: alcoholUse || null,
-          weed_use: weedUse || null,
-          drug_use: drugUse || null,
         }),
       });
       if (!profileRes.ok) {
@@ -301,20 +268,6 @@ export default function OnboardingPage() {
   }
 
   const stepProgress = Math.round((step / TOTAL_STEPS) * 100);
-
-  function toggleCuisine(cuisine) {
-    setFavoriteCuisines((prev) => {
-      if (prev.includes(cuisine)) return prev.filter((item) => item !== cuisine);
-      if (prev.length >= 3) return prev;
-      return [...prev, cuisine];
-    });
-  }
-
-  function toggleRaceEthnicity(option) {
-    if (!option) return;
-    setRaceEthnicities((prev) => (prev.includes(option) ? prev : [...prev, option]));
-    setRaceEthnicityToAdd('');
-  }
 
   function copyToClipboard() {
     navigator.clipboard.writeText(inviteCode);
@@ -475,7 +428,7 @@ export default function OnboardingPage() {
                 <div className="flex flex-wrap gap-2 mt-1">
                   {GENDERS.map((g) => (
                     <button key={g} type="button" onClick={() => setGender(g)}
-                      className={`px-4 py-2 rounded-xl border text-sm font-medium transition-colors ${gender === g ? 'bg-black text-white border-gray-500' : 'border-slate-200 text-slate-600 hover:border-gray-300'}`}>
+                      className={`px-4 py-2 rounded-xl text-sm font-medium chip ${gender === g ? 'chip-selected' : ''}`}>
                       {g}
                     </button>
                   ))}
@@ -488,7 +441,7 @@ export default function OnboardingPage() {
                 <div className="flex flex-wrap gap-2 mt-1">
                   {LOOKING_FOR.map((l) => (
                     <button key={l} type="button" onClick={() => setLookingFor(l)}
-                      className={`px-4 py-2 rounded-xl border text-sm font-medium transition-colors ${lookingFor === l ? 'bg-black text-white border-gray-500' : 'border-slate-200 text-slate-600 hover:border-gray-300'}`}>
+                      className={`px-4 py-2 rounded-xl text-sm font-medium chip ${lookingFor === l ? 'chip-selected' : ''}`}>
                       {l}
                     </button>
                   ))}
@@ -499,119 +452,6 @@ export default function OnboardingPage() {
         )}
 
         {step === 2 && (
-          <div className="space-y-8 py-6">
-            {/* Personality Type */}
-            <div className="space-y-4">
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900">
-                  What&apos;s your personality type? <span className="text-sm font-normal text-slate-400">(optional)</span>
-                </h2>
-                <p className="text-slate-500 mt-1">Pick one that best describes you.</p>
-              </div>
-              <div className="space-y-3">
-                {PERSONALITY_OPTIONS.map((opt) => (
-                  <button key={opt} type="button" onClick={() => setPersonalityAnswer(opt)}
-                    className={`w-full text-left px-5 py-4 rounded-2xl border-2 text-sm font-medium transition-all ${personalityAnswer === opt ? 'border-gray-500 bg-gray-50 text-slate-800' : 'border-slate-100 text-slate-700 hover:border-slate-200 bg-white'}`}>
-                    <div className="flex items-center justify-between">
-                      {opt}
-                      {personalityAnswer === opt && <Check className="w-4 h-4 text-black" />}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Favorite Cuisine */}
-            <div className="space-y-4">
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900">
-                  Favorite Cuisine? <span className="text-sm font-normal text-slate-400">(optional)</span>
-                </h2>
-                <p className="text-slate-500 mt-1">Select 1–3 cuisines you love.</p>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {CUISINE_OPTIONS.map((cuisine) => (
-                  <button key={cuisine} type="button" onClick={() => toggleCuisine(cuisine)}
-                    className={`px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all ${favoriteCuisines.includes(cuisine) ? 'border-gray-500 bg-gray-50 text-slate-800' : 'border-slate-100 text-slate-700 hover:border-slate-200 bg-white'}`}>
-                    <div className="flex items-center justify-between">
-                      {cuisine}
-                      {favoriteCuisines.includes(cuisine) && <Check className="w-3 h-3 text-black" />}
-                    </div>
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-slate-400">{favoriteCuisines.length}/3 selected</p>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900">
-                  Race & ethnicity <span className="text-sm font-normal text-slate-400">(optional)</span>
-                </h2>
-                <p className="text-slate-500 mt-1">Select all that apply.</p>
-              </div>
-              <div className="space-y-2">
-                <Select value={raceEthnicityToAdd} onValueChange={toggleRaceEthnicity}>
-                  <SelectTrigger><SelectValue placeholder="Choose a race/ethnicity" /></SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {RACE_ETHNICITY_OPTIONS.map((option) => (
-                      <SelectItem key={option} value={option}>{option}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {raceEthnicities.map((option) => (
-                  <span key={option} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 text-xs">
-                    {option}
-                    <button type="button" onClick={() => setRaceEthnicities((prev) => prev.filter((item) => item !== option))}>
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900">
-                  Drugs, weed, or alcohol use <span className="text-sm font-normal text-slate-400">(optional)</span>
-                </h2>
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <Label>Alcohol</Label>
-                  <Select value={alcoholUse} onValueChange={setAlcoholUse}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Select alcohol use" /></SelectTrigger>
-                    <SelectContent>
-                      {SUBSTANCE_USE_OPTIONS.map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Weed</Label>
-                  <Select value={weedUse} onValueChange={setWeedUse}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Select weed use" /></SelectTrigger>
-                    <SelectContent>
-                      {SUBSTANCE_USE_OPTIONS.map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Drugs</Label>
-                  <Select value={drugUse} onValueChange={setDrugUse}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Select drug use" /></SelectTrigger>
-                    <SelectContent>
-                      {SUBSTANCE_USE_OPTIONS.map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {step === 3 && (
           <div className="space-y-6 py-6">
             <div>
               <h2 className="text-2xl font-bold text-slate-900">Add your photos</h2>
@@ -626,7 +466,7 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {step === 4 && (
+        {step === 3 && (
           <div className="space-y-6 py-6">
             <div>
               <h2 className="text-2xl font-bold text-slate-900">Add your prompts</h2>
@@ -656,7 +496,7 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {step === 5 && (
+        {step === 4 && (
           <div className="space-y-6 py-6">
             <div>
               <h2 className="text-2xl font-bold text-slate-900">Looking good, {firstName}!</h2>
@@ -672,12 +512,6 @@ export default function OnboardingPage() {
                 { label: 'Minor(s)', value: minors.filter(Boolean).join(', ') || 'None' },
                 { label: 'Gender', value: gender },
                 { label: 'Looking for', value: lookingFor },
-                { label: 'Personality', value: personalityAnswer || 'Skipped' },
-                { label: 'Favorite Cuisine(s)', value: favoriteCuisines.join(', ') || 'Skipped' },
-                { label: 'Race & ethnicity', value: raceEthnicities.join(', ') || 'Skipped' },
-                { label: 'Alcohol use', value: alcoholUse || 'Skipped' },
-                { label: 'Weed use', value: weedUse || 'Skipped' },
-                { label: 'Drugs use', value: drugUse || 'Skipped' },
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between py-2 border-b border-slate-100">
                   <span className="text-slate-500">{label}</span>
@@ -715,8 +549,7 @@ export default function OnboardingPage() {
               disabled={
                 (step === 1 && !canProceedStep1()) ||
                 (step === 2 && !canProceedStep2()) ||
-                (step === 3 && !canProceedStep3()) ||
-                (step === 4 && !canProceedStep4())
+                (step === 3 && !canProceedStep3())
               }
               className="gap-2"
             >

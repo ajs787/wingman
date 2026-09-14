@@ -137,11 +137,6 @@ function MatchCard({ match, onAccept, onReject }) {
           <p className="text-white/80 text-sm mt-0.5">
             {person?.school || person?.year} · {person?.majors?.join(', ') || person?.major}
           </p>
-          {person?.personality_answer && (
-            <Badge variant="secondary" className="mt-2 text-xs bg-white/20 text-white border-transparent">
-              {person.personality_answer}
-            </Badge>
-          )}
         </div>
       </button>
 
