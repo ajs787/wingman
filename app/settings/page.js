@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useDropzone } from 'react-dropzone';
 import { ArrowLeft, Upload, X, GripVertical, Check, Copy, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
+import ThemeToggle from '@/components/theme-toggle';
 import { RACE_ETHNICITY_OPTIONS, SEXUALITY_OPTIONS, PROFILE_PROMPTS } from '@/lib/constants';
 
 const YEARS = ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Graduate', 'Other'];
@@ -344,6 +345,19 @@ export default function SettingsPage() {
         </section>
 
         {/* Photos */}
+        {/* Appearance — theme lives here rather than the feed header, which
+            got too cramped on mobile. */}
+        <section>
+          <h2 className="text-base font-semibold text-slate-800 mb-4">Appearance</h2>
+          <div className="bg-gray-50 rounded-2xl p-6 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold text-slate-800">Theme</p>
+              <p className="text-sm text-slate-600 mt-0.5">Switch between light and dark mode.</p>
+            </div>
+            <ThemeToggle />
+          </div>
+        </section>
+
         <section>
           <h2 className="text-base font-semibold text-slate-800 mb-1">Photos</h2>
           <p className="text-xs text-slate-400 mb-4">{photoCount}/5 uploaded</p>
