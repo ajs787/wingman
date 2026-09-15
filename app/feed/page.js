@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import ThemeToggle from '@/components/theme-toggle';
+import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import { Users, Plus, Heart, ChevronRight, UserCircle, Sparkles, Flame, MessageCircle, Settings, Mail, Trophy } from 'lucide-react';
 import { BrandMark, Wordmark } from '@/components/brand';
@@ -21,6 +21,11 @@ export default function FeedPage() {
   const [myRank, setMyRank] = useState(null);
   const [crew, setCrew] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Inline invite-code redemption, so adding a friend never needs a detour.
+  const [inviteCode, setInviteCode] = useState('');
+  const [redeeming, setRedeeming] = useState(false);
+  const [codeError, setCodeError] = useState('');
+  const [codeSuccess, setCodeSuccess] = useState('');
 
   useEffect(() => {
     async function load() {
@@ -68,6 +73,40 @@ export default function FeedPage() {
     load();
   }, []);
 
+  async function handleRedeemCode(e) {
+    e.preventDefault();
+    setCodeError('');
+    setCodeSuccess('');
+    const trimmed = inviteCode.trim().toUpperCase();
+    if (!trimmed) return;
+
+    setRedeeming(true);
+    try {
+      const res = await fetch('/api/invite/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: trimmed }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCodeError(data.error || 'Invalid invite code. Please check and try again.');
+        return;
+      }
+      setCodeSuccess(`You're now ${data.owner?.name ? `${data.owner.name}'s` : 'their'} wingman.`);
+      setInviteCode('');
+      // Refresh so the new friend appears in "Swipe for a friend" right away.
+      const refreshed = await fetch('/api/delegations');
+      if (refreshed.ok) {
+        const { owners } = await refreshed.json();
+        setFriends(owners ?? []);
+      }
+    } catch {
+      setCodeError('Something went wrong. Please try again.');
+    } finally {
+      setRedeeming(false);
+    }
+  }
+
   function handleSignOut() {
     try { localStorage.removeItem('wingman_user'); } catch {}
     fetch('/api/auth/logout', { method: 'POST' }).finally(() => {
@@ -85,7 +124,6 @@ export default function FeedPage() {
             <Wordmark className="text-2xl" />
           </div>
           <div className="flex items-center gap-1">
-            <ThemeToggle />
             <Link href="/settings">
               <Button variant="ghost" size="icon" title="Edit profile">
                 <UserCircle className="w-5 h-5 text-muted-foreground" />
@@ -182,12 +220,7 @@ export default function FeedPage() {
               <Heart className="w-8 h-8 text-orange-300 mx-auto mb-3" />
               <p className="text-muted-foreground font-medium">No friends added yet</p>
               <p className="text-muted-foreground text-sm mt-1 mb-4">Enter a friend&apos;s invite code to get started</p>
-              <p className="text-muted-foreground text-xs mb-4">Basic version: up to {BASIC_MAX_ACTIVE_DELEGATIONS} friends at a time.</p>
-              <Link href="/delegate">
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Plus className="w-4 h-4" /> Enter invite code
-                </Button>
-              </Link>
+              <p className="text-muted-foreground text-xs">Basic version: up to {BASIC_MAX_ACTIVE_DELEGATIONS} friends at a time.</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -219,6 +252,42 @@ export default function FeedPage() {
               ))}
             </div>
           )}
+        </section>
+
+        {/* Enter an invite code inline — redeeming here keeps the whole
+            "become someone's wingman" flow on one screen. */}
+        <section className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Plus className="w-4 h-4 text-orange-500" />
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Enter invite code</h2>
+          </div>
+          <div className="rounded-[1.5rem] bg-card card-pop p-5">
+            <p className="text-sm text-muted-foreground mb-4">
+              Got a code from a friend? Enter it to become their wingman.
+            </p>
+            <form onSubmit={handleRedeemCode} className="flex gap-2">
+              <Input
+                value={inviteCode}
+                onChange={(e) => {
+                  setInviteCode(e.target.value.toUpperCase());
+                  setCodeError('');
+                  setCodeSuccess('');
+                }}
+                placeholder="ABC123"
+                maxLength={12}
+                autoCapitalize="characters"
+                autoCorrect="off"
+                spellCheck={false}
+                aria-label="Invite code"
+                className="h-12 flex-1 font-mono tracking-[0.2em] uppercase placeholder:tracking-normal"
+              />
+              <Button type="submit" className="h-12 px-5" disabled={redeeming || inviteCode.trim().length < 6}>
+                {redeeming ? 'Adding…' : 'Redeem'}
+              </Button>
+            </form>
+            {codeError && <p className="mt-3 text-sm text-red-200">{codeError}</p>}
+            {codeSuccess && <p className="mt-3 text-sm text-foreground font-medium">{codeSuccess}</p>}
+          </div>
         </section>
 
         {/* My wingman rank: gamification/social-proof content, kept below the
@@ -289,13 +358,6 @@ export default function FeedPage() {
           </section>
         )}
 
-        {/* CTA to enter code */}
-        <Link href="/delegate">
-          <Button variant="outline" className="w-full gap-2">
-            <Plus className="w-4 h-4" />
-            Enter a friend&apos;s code
-          </Button>
-        </Link>
       </div>
 
       {/* Bottom Navigation */}
