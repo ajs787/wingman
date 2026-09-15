@@ -30,10 +30,7 @@ export async function POST(request) {
 
   if (!invite) return NextResponse.json({ error: 'Invalid invite code.' }, { status: 404 });
 
-  if (new Date(invite.expires_at) < new Date()) {
-    return NextResponse.json({ error: 'This invite code has expired.' }, { status: 410 });
-  }
-
+  // Codes don't expire — they're single-use, so the only spent-check is uses.
   if (invite.uses >= invite.max_uses) {
     return NextResponse.json({ error: 'This invite code has already been used.' }, { status: 410 });
   }
