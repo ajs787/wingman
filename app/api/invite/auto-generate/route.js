@@ -18,13 +18,10 @@ export async function POST(request) {
     uses: 0,
   });
 
-  const code = generateInviteCode();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
-
+  // No expiry — the code stays valid until it's redeemed once.
   const invite = await InviteCode.create({
-    code,
+    code: generateInviteCode(),
     owner_user_id: session.sub,
-    expires_at: expiresAt,
     max_uses: 1,
     uses: 0,
   });
@@ -34,7 +31,6 @@ export async function POST(request) {
     invite: {
       id: invite._id.toString(),
       code: invite.code,
-      expires_at: invite.expires_at,
       max_uses: invite.max_uses,
       uses: invite.uses,
     },

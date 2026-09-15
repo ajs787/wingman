@@ -269,19 +269,20 @@ export default function FeedPage() {
               <Input
                 value={inviteCode}
                 onChange={(e) => {
-                  setInviteCode(e.target.value.toUpperCase());
+                  // Codes are 8 chars from an unambiguous A-Z/2-9 alphabet.
+                  setInviteCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8));
                   setCodeError('');
                   setCodeSuccess('');
                 }}
-                placeholder="ABC123"
-                maxLength={12}
+                placeholder="ABCD2345"
+                maxLength={8}
                 autoCapitalize="characters"
                 autoCorrect="off"
                 spellCheck={false}
                 aria-label="Invite code"
                 className="h-12 flex-1 font-mono tracking-[0.2em] uppercase placeholder:tracking-normal"
               />
-              <Button type="submit" className="h-12 px-5" disabled={redeeming || inviteCode.trim().length < 6}>
+              <Button type="submit" className="h-12 px-5" disabled={redeeming || inviteCode.trim().length !== 8}>
                 {redeeming ? 'Adding…' : 'Redeem'}
               </Button>
             </form>

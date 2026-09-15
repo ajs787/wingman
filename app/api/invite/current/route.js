@@ -11,11 +11,12 @@ export async function GET(request) {
 
   await connectDB();
 
-  // Get the latest invite code for this user
+  // Codes never expire, so "current" means the newest one that hasn't been
+  // redeemed yet. Once a friend uses it, the owner generates a fresh one.
   const code = await InviteCode.findOne({
     owner_user_id: session.sub,
-    expires_at: { $gt: new Date() },
-  }).sort({ created_at: -1 });
+    $expr: { $lt: ['$uses', '$max_uses'] },
+  }).sort({ createdAt: -1 });
 
   if (!code) {
     return NextResponse.json({
@@ -28,8 +29,7 @@ export async function GET(request) {
     code: {
       id: code._id.toString(),
       code: code.code,
-      expires_at: code.expires_at,
-      created_at: code.created_at,
+      created_at: code.createdAt,
     },
   });
 }
