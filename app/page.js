@@ -108,6 +108,24 @@ export default function LandingPage() {
           <Wordmark className="text-lg" />
         </div>
         <p className="font-mono text-sm text-muted-foreground">Est. 03.22.26</p>
+
+        <nav aria-label="Legal" className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm">
+          <Link href="/privacy" className="text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline">
+            Privacy Policy
+          </Link>
+          <span aria-hidden="true" className="text-muted-foreground/40">·</span>
+          <Link href="/terms" className="text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline">
+            Terms of Service
+          </Link>
+          <span aria-hidden="true" className="text-muted-foreground/40">·</span>
+          <Link href="/support" className="text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline">
+            Support
+          </Link>
+        </nav>
+
+        <p className="mt-4 text-xs text-muted-foreground/80">
+          © {new Date().getFullYear()} Wingman. All rights reserved.
+        </p>
       </footer>
     </div>
   );
