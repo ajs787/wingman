@@ -9,7 +9,7 @@ export const metadata = {
   description: 'How Wingman collects, uses, shares, and protects your information, and your rights.',
 };
 
-const UPDATED = 'July 7, 2026';
+const UPDATED = 'September 16, 2026';
 
 function Section({ title, children }) {
   return (
@@ -73,7 +73,14 @@ export default function PrivacyPolicyPage() {
           <Section title="How your information is shared">
             <ul className="list-disc pl-5 space-y-1">
               <li><strong>With other users</strong>: your profile is visible to other users and to the wingmen you authorize. Notes your wingmen write may be shown to the other side&rsquo;s wingmen as part of a potential match. Messages are visible to you and your match.</li>
-              <li><strong>With service providers</strong>: vendors who host our infrastructure, deliver email, and provide similar operational functions, under contracts that limit their use of your data.</li>
+              <li>
+                <strong>With service providers</strong>: vendors who operate the Service on our behalf, under
+                contracts that limit their use of your data to providing services to us. Today these are{' '}
+                <strong>Vercel</strong> (website hosting and photo storage), <strong>MongoDB Atlas</strong>{' '}
+                (database hosting), and <strong>Resend</strong> (verification and password-reset emails). If
+                you choose to sign in with Google, <strong>Google</strong> processes that sign-in. We update
+                this list when our providers change.
+              </li>
               <li><strong>For legal reasons</strong>: to comply with law, respond to lawful requests, enforce our Terms, or protect the rights, safety, and property of Wingman, our users, or the public.</li>
               <li><strong>Business transfers</strong>: in connection with a merger, acquisition, financing, or sale of assets, your information may be transferred as a business asset, subject to this Policy.</li>
             </ul>

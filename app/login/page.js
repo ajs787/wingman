@@ -658,6 +658,22 @@ function AuthForm() {
           >
             {loading ? (isSignup ? 'Creating account…' : 'Logging in…') : (isSignup ? 'Create account' : 'Log in')}
           </Button>
+
+          {/* Clickwrap consent — surfacing this at the point of sign-up is what
+              makes the Terms enforceable, not merely linking them in a footer. */}
+          {isSignup && (
+            <p className="text-center text-xs text-primary-foreground/80">
+              By creating an account, you agree to our{' '}
+              <Link href="/terms" className="font-semibold underline underline-offset-2 hover:text-primary-foreground">
+                Terms of Service
+              </Link>{' '}
+              and{' '}
+              <Link href="/privacy" className="font-semibold underline underline-offset-2 hover:text-primary-foreground">
+                Privacy Policy
+              </Link>
+              . You must be 18 or older to use Wingman.
+            </p>
+          )}
         </form>
 
         <div className="relative my-6">

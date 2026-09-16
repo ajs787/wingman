@@ -11,7 +11,7 @@ export const metadata = {
   description: 'The terms, community rules, and legal agreement for using Wingman.',
 };
 
-const UPDATED = 'July 7, 2026';
+const UPDATED = 'September 16, 2026';
 
 function Section({ n, title, children }) {
   return (
