@@ -48,7 +48,7 @@ function AuthForm() {
       });
       google.accounts.id.renderButton(
         document.getElementById('google-button'),
-        { theme: 'outline', size: 'large', width: '100%' }
+        { theme: 'outline', size: 'large', width: 280 }
       );
       setGoogleReady(true);
     }
@@ -685,7 +685,7 @@ function AuthForm() {
           </div>
         </div>
 
-        <div id="google-button"></div>
+        <div id="google-button" className="flex justify-center"></div>
 
         <p className="mt-6 text-center text-xs text-slate-400">
           {isSignup
