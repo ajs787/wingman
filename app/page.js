@@ -59,7 +59,7 @@ export default function LandingPage() {
         </h1>
 
         <p className="relative mb-10 max-w-xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
-          Your group chat already runs your love life. Now it&rsquo;s official.
+          You&rsquo;re bad at picking. Your friends aren&rsquo;t.
         </p>
 
         <div className="relative flex flex-col items-center gap-3 sm:flex-row">
@@ -75,9 +75,8 @@ export default function LandingPage() {
       {/* Features */}
       <section className="border-t border-border bg-card px-6 py-28 sm:py-32">
         <div className="mx-auto max-w-4xl">
-          <p className="eyebrow mb-3 text-center">how it works</p>
           <h2 className="mb-14 text-center font-display text-3xl font-extrabold text-foreground sm:text-4xl">
-            Three swipes to a spark
+            How it works.
           </h2>
           <div className="grid gap-6 sm:grid-cols-3">
             {FEATURES.map((f) => {
