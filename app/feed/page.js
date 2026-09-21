@@ -7,9 +7,8 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
-import { Users, Plus, Heart, ChevronRight, UserCircle, Sparkles, Flame, MessageCircle, Settings, Mail, Trophy } from 'lucide-react';
+import { Users, Plus, Heart, ChevronRight, UserCircle, Sparkles, Flame, MessageCircle, Settings, Mail, Trophy, Share2 } from 'lucide-react';
 import { BrandMark, Wordmark } from '@/components/brand';
-import { BASIC_MAX_ACTIVE_DELEGATIONS } from '@/lib/constants';
 
 export default function FeedPage() {
   const router = useRouter();
@@ -26,6 +25,8 @@ export default function FeedPage() {
   const [redeeming, setRedeeming] = useState(false);
   const [codeError, setCodeError] = useState('');
   const [codeSuccess, setCodeSuccess] = useState('');
+  // The user's OWN link, so a wingman-less feed has a real action on it.
+  const [myInviteCode, setMyInviteCode] = useState('');
 
   useEffect(() => {
     async function load() {
@@ -67,11 +68,44 @@ export default function FeedPage() {
           const { owners } = await delegationsRes.json();
           setFriends(owners ?? []);
         }
+
+        // Make sure there's always a link to share — mint one if needed.
+        try {
+          const cur = await fetch('/api/invite/current').then((r) => (r.ok ? r.json() : null));
+          if (cur?.code?.code) {
+            setMyInviteCode(cur.code.code);
+          } else {
+            const gen = await fetch('/api/invite/auto-generate', { method: 'POST' });
+            if (gen.ok) {
+              const { invite } = await gen.json();
+              setMyInviteCode(invite?.code || '');
+            }
+          }
+        } catch {}
       } catch {}
       setLoading(false);
     }
     load();
   }, []);
+
+  async function shareMyLink() {
+    if (!myInviteCode) return;
+    const url = `${window.location.origin}/join/${myInviteCode}`;
+    const text = `be my wingman on Wingman — swipe for me here: ${url}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Be my wingman', text, url });
+        return;
+      } catch {
+        // dismissed — fall through to clipboard
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCodeSuccess('Invite link copied — send it to a friend.');
+      setCodeError('');
+    } catch {}
+  }
 
   async function handleRedeemCode(e) {
     e.preventDefault();
@@ -216,11 +250,20 @@ export default function FeedPage() {
               ))}
             </div>
           ) : friends.length === 0 ? (
-            <div className="text-center py-12 rounded-[1.5rem] bg-card border border-dashed border-white/20">
+            <div className="rounded-[1.5rem] bg-card card-pop p-6 text-center">
               <Heart className="w-8 h-8 text-orange-300 mx-auto mb-3" />
-              <p className="text-muted-foreground font-medium">No friends added yet</p>
-              <p className="text-muted-foreground text-sm mt-1 mb-4">Enter a friend&apos;s invite code to get started</p>
-              <p className="text-muted-foreground text-xs">Basic version: up to {BASIC_MAX_ACTIVE_DELEGATIONS} friends at a time.</p>
+              <p className="font-display font-bold text-foreground">Nobody&apos;s swiping for you yet</p>
+              <p className="text-muted-foreground text-sm mt-1 mb-5">
+                Wingman starts when a friend has your back. Send them your link &mdash; one tap and
+                they&apos;re your wingman.
+              </p>
+              <Button onClick={shareMyLink} size="lg" className="w-full gap-2" disabled={!myInviteCode}>
+                <Share2 className="w-4 h-4" />
+                Share my invite link
+              </Button>
+              <p className="text-muted-foreground text-xs mt-4">
+                Got a code from a friend instead? Enter it below to swipe for them.
+              </p>
             </div>
           ) : (
             <div className="space-y-3">

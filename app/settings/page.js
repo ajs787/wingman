@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { useDropzone } from 'react-dropzone';
-import { ArrowLeft, Upload, X, GripVertical, Check, Copy, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Upload, X, GripVertical, Check, Copy, RefreshCw, Share2 } from 'lucide-react';
 import Link from 'next/link';
 import ThemeToggle from '@/components/theme-toggle';
 import { RACE_ETHNICITY_OPTIONS, SEXUALITY_OPTIONS, PROFILE_PROMPTS } from '@/lib/constants';
@@ -164,10 +164,29 @@ export default function SettingsPage() {
     load();
   }, []);
 
-  async function copyInviteCode() {
-    if (!inviteCode) return;
-    navigator.clipboard.writeText(inviteCode);
-    toast({ title: 'Copied!', description: 'Your invite code is in your clipboard.' });
+  // A tappable link beats a typed code — it's the step the whole loop depends on.
+  const inviteLink = inviteCode
+    ? `${typeof window !== 'undefined' ? window.location.origin : 'https://www.wingman33.com'}/join/${inviteCode}`
+    : '';
+  const inviteText = `be my wingman on Wingman — swipe for me here: ${inviteLink}`;
+
+  async function copyInviteLink() {
+    if (!inviteLink) return;
+    navigator.clipboard.writeText(inviteLink);
+    toast({ title: 'Link copied!', description: 'Send it to a friend so they can swipe for you.' });
+  }
+
+  async function shareInviteLink() {
+    if (!inviteLink) return;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Be my wingman', text: inviteText, url: inviteLink });
+        return;
+      } catch {
+        // user dismissed the sheet — fall through to copy
+      }
+    }
+    copyInviteLink();
   }
 
   async function regenerateInviteCode() {
@@ -303,21 +322,29 @@ export default function SettingsPage() {
           <h2 className="text-base font-semibold text-slate-800 mb-4">Share your code</h2>
           <div className="bg-gray-50 rounded-2xl p-6 space-y-4">
             <p className="text-sm text-slate-600">
-              Share this code with friends so they can swipe on your behalf.
+              Send this link to a friend. One tap and they&rsquo;re your wingman &mdash; no code to type.
             </p>
             {inviteCode ? (
               <>
                 <div className="bg-white rounded-xl p-4 border border-gray-200">
-                  <p className="text-xs text-slate-500 text-center mb-2 uppercase tracking-wide">Your code</p>
-                  <p className="text-center font-mono text-3xl font-bold text-black tracking-widest">{inviteCode}</p>
+                  <p className="text-xs text-slate-500 text-center mb-2 uppercase tracking-wide">Your invite link</p>
+                  <p className="break-all text-center font-mono text-sm font-semibold text-black">{inviteLink}</p>
+                  <p className="mt-2 text-center text-xs text-slate-500">code: <span className="font-mono tracking-widest">{inviteCode}</span></p>
                 </div>
+                <button
+                  onClick={shareInviteLink}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg bg-black text-white text-sm font-semibold transition-colors hover:bg-gray-800"
+                >
+                  <Share2 className="w-4 h-4" />
+                  Share invite link
+                </button>
                 <div className="flex gap-2">
                   <button
-                    onClick={copyInviteCode}
+                    onClick={copyInviteLink}
                     className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-slate-700 text-sm font-medium transition-colors"
                   >
                     <Copy className="w-4 h-4" />
-                    Copy code
+                    Copy link
                   </button>
                   <button
                     onClick={regenerateInviteCode}
