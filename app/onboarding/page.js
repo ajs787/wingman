@@ -141,18 +141,19 @@ export default function OnboardingPage() {
     return firstName.trim() && lastName.trim() && age && hasSchool && year && hasOneMajor && gender && lookingFor;
   }
   function canProceedStep2() {
-    return photos.filter((p) => p?.file || p?.existing).length === 5;
+    // One photo is enough to get in; the other four can come later in Settings.
+    return photos.filter((p) => p?.file || p?.existing).length >= 1;
   }
   function canProceedStep3() {
-    return promptSelections.every((p) => p.prompt && p.answer.trim().length > 0);
+    return promptSelections.some((p) => p.prompt && p.answer.trim().length > 0);
   }
 
   // A disabled Next button with no explanation is a dead end for the user —
   // surface exactly what's missing instead of leaving them to guess.
   function stepBlockedReason() {
     if (step === 1 && !canProceedStep1()) return 'Add your name, school, major, year, and who you’re looking for.';
-    if (step === 2 && !canProceedStep2()) return 'Add all 5 photos to continue.';
-    if (step === 3 && !canProceedStep3()) return 'Answer all your prompts to continue.';
+    if (step === 2 && !canProceedStep2()) return 'Add at least 1 photo to continue.';
+    if (step === 3 && !canProceedStep3()) return 'Answer at least 1 prompt to continue.';
     return null;
   }
 
@@ -202,7 +203,7 @@ export default function OnboardingPage() {
 
   async function handleFinish() {
     if (!canProceedStep3()) {
-      toast({ title: 'Finish all prompts', description: 'Please complete all 3 prompts before signing up.', variant: 'destructive' });
+      toast({ title: 'Answer a prompt', description: 'Answer at least one prompt before finishing.', variant: 'destructive' });
       return;
     }
 
@@ -237,11 +238,15 @@ export default function OnboardingPage() {
         return;
       }
 
-      // 2. Upload new photos
+      // 2. Upload new photos. Prompts are stored on photos by position, so pair
+      //    answered prompts with uploaded photos in order — otherwise a prompt
+      //    answered in a later slot than any uploaded photo is silently lost.
+      const answeredPrompts = promptSelections.filter((p) => p?.prompt && p.answer.trim());
+      let promptCursor = 0;
       for (let i = 0; i < photos.length; i++) {
         const p = photos[i];
         if (p?.file) {
-          const promptEl = promptSelections[i];
+          const promptEl = answeredPrompts[promptCursor++];
           const fd = new FormData();
           fd.append('file', p.file);
           fd.append('position', String(i));
@@ -455,14 +460,14 @@ export default function OnboardingPage() {
           <div className="space-y-6 py-6">
             <div>
               <h2 className="text-2xl font-bold text-slate-900">Add your photos</h2>
-              <p className="text-slate-500 mt-1">Upload exactly 5 photos. First is your main photo.</p>
+              <p className="text-slate-500 mt-1">Add at least 1 photo &mdash; up to 5. The first is your main photo.</p>
             </div>
             <div className="grid grid-cols-3 gap-3">
               {photos.map((photo, i) => (
                 <PhotoSlot key={i} index={i} photo={photo} onUpload={handlePhotoUpload} onRemove={handlePhotoRemove} />
               ))}
             </div>
-            <p className="text-xs text-slate-400 text-center">{photos.filter(Boolean).length}/5 photos added</p>
+            <p className="text-xs text-slate-400 text-center">{photos.filter(Boolean).length}/5 added &middot; you can add the rest later in Settings</p>
           </div>
         )}
 
@@ -470,7 +475,7 @@ export default function OnboardingPage() {
           <div className="space-y-6 py-6">
             <div>
               <h2 className="text-2xl font-bold text-slate-900">Add your prompts</h2>
-              <p className="text-slate-500 mt-1">Complete all 3 prompts so people get to know you.</p>
+              <p className="text-slate-500 mt-1">Answer at least 1 &mdash; up to 3. They show on your profile.</p>
             </div>
             {promptSelections.map((ps, i) => (
               <div key={i} className="space-y-2 p-4 rounded-2xl border border-slate-100 bg-slate-50">

@@ -18,6 +18,12 @@ export async function middleware(request) {
     return NextResponse.next();
   }
 
+  // Invite links must be reachable signed-out: /join/<code> routes the visitor
+  // through sign-up and back, so the code survives the round trip.
+  if (pathname.startsWith('/join/')) {
+    return NextResponse.next();
+  }
+
   const user = request.cookies.get('wingman_session')?.value;
   if (!user) {
     const loginUrl = new URL('/login', request.url);
