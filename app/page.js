@@ -2,23 +2,23 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { HandHeart, HeartHandshake, UserRoundCheck } from 'lucide-react';
+import { Drumstick, PartyPopper, GraduationCap } from 'lucide-react';
 import ThemeToggle from '@/components/theme-toggle';
 import { BrandLockup, BrandMark, Wordmark } from '@/components/brand';
 
 const FEATURES = [
   {
-    icon: HandHeart,
+    icon: Drumstick,
     title: 'Friends swipe',
     desc: 'Invite a friend with a one-time code. They browse the deck on your behalf.',
   },
   {
-    icon: HeartHandshake,
+    icon: PartyPopper,
     title: 'Mutual approval',
     desc: "A match only forms when both sides' friend teams right-swipe each other.",
   },
   {
-    icon: UserRoundCheck,
+    icon: GraduationCap,
     title: 'Real people only',
     desc: 'Sign up with your school email. One account per person, always.',
   },
@@ -59,7 +59,7 @@ export default function LandingPage() {
         </h1>
 
         <p className="relative mb-10 max-w-xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
-          The first dating app where your crew finds your match &mdash; and a spark only happens when both sides swipe right.
+          You&rsquo;re bad at picking. Your friends aren&rsquo;t.
         </p>
 
         <div className="relative flex flex-col items-center gap-3 sm:flex-row">
@@ -75,9 +75,8 @@ export default function LandingPage() {
       {/* Features */}
       <section className="border-t border-border bg-card px-6 py-28 sm:py-32">
         <div className="mx-auto max-w-4xl">
-          <p className="eyebrow mb-3 text-center">how it works</p>
           <h2 className="mb-14 text-center font-display text-3xl font-extrabold text-foreground sm:text-4xl">
-            Three swipes to a spark
+            How it works.
           </h2>
           <div className="grid gap-6 sm:grid-cols-3">
             {FEATURES.map((f) => {
