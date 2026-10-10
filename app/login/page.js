@@ -401,31 +401,24 @@ function AuthForm() {
           <form onSubmit={handleResetRequest} className="space-y-4">
             <h1 className="text-2xl font-bold text-slate-900 text-center mb-1">Reset your password</h1>
             <p className="text-slate-400 text-center text-sm mb-6">
-              Enter your Rutgers NetID and we&apos;ll email you a 6-digit reset code.
+              Enter your school email and we&apos;ll send you a 6-digit reset code.
             </p>
             <div className="space-y-2">
-              <Label htmlFor="reset-netid">School email</Label>
-              <div className="flex h-12 w-full items-center overflow-hidden rounded-xl border border-input bg-background ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-                <input
-                  id="reset-netid"
-                  type="text"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  autoComplete="username"
-                  placeholder="netid"
-                  value={email.replace(/@scarletmail\.rutgers\.edu$/, '')}
-                  onChange={(e) => {
-                    const id = e.target.value.replace(/@.*/, '').trim().toLowerCase();
-                    setEmail(id ? `${id}@scarletmail.rutgers.edu` : '');
-                  }}
-                  required
-                  className="min-w-0 flex-1 bg-transparent px-4 text-sm text-foreground outline-none placeholder:text-muted-foreground"
-                />
-                <span className="select-none whitespace-nowrap border-l border-input px-3 text-xs text-muted-foreground">
-                  @scarletmail.rutgers.edu
-                </span>
-              </div>
+              <Label htmlFor="reset-email">School email</Label>
+              <Input
+                id="reset-email"
+                type="email"
+                inputMode="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                autoComplete="username"
+                placeholder="you@university.edu"
+                value={email}
+                onChange={(e) => setEmail(e.target.value.trim().toLowerCase())}
+                required
+                className="h-12"
+              />
             </div>
             {error && (
               <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-xl border border-red-100">
@@ -552,31 +545,23 @@ function AuthForm() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">School email</Label>
-            {/* NetID field: user types only their netid; the ScarletMail suffix
-                is fixed and appended automatically to form the full email. */}
-            <div className="flex h-12 w-full items-center overflow-hidden rounded-xl border border-input bg-background ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-              <input
-                id="email"
-                type="text"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                autoComplete="username"
-                placeholder="netid"
-                value={email.replace(/@scarletmail\.rutgers\.edu$/, '')}
-                onChange={(e) => {
-                  const id = e.target.value.replace(/@.*/, '').trim().toLowerCase();
-                  setEmail(id ? `${id}@scarletmail.rutgers.edu` : '');
-                }}
-                required
-                className="min-w-0 flex-1 bg-transparent px-4 text-sm text-foreground outline-none placeholder:text-muted-foreground"
-              />
-              <span className="select-none whitespace-nowrap border-l border-input px-3 text-xs text-muted-foreground">
-                @scarletmail.rutgers.edu
-              </span>
-            </div>
+            {/* Any .edu address — the server enforces the .edu requirement. */}
+            <Input
+              id="email"
+              type="email"
+              inputMode="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              autoComplete="username"
+              placeholder="you@university.edu"
+              value={email}
+              onChange={(e) => setEmail(e.target.value.trim().toLowerCase())}
+              required
+              className="h-12"
+            />
             {isSignup && (
-              <p className="text-xs text-primary-foreground/80">Enter your Rutgers NetID — we&apos;ll email a 6-digit code to your ScarletMail.</p>
+              <p className="text-xs text-primary-foreground/80">Use your school (.edu) email — we&apos;ll send a 6-digit code to verify it.</p>
             )}
           </div>
 

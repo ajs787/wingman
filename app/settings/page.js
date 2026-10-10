@@ -12,7 +12,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useDropzone } from 'react-dropzone';
 import { ArrowLeft, Upload, X, GripVertical, Check, Copy, RefreshCw, Share2 } from 'lucide-react';
 import Link from 'next/link';
-import ThemeToggle from '@/components/theme-toggle';
+import ThemeSelector from '@/components/theme-selector';
 import { RACE_ETHNICITY_OPTIONS, SEXUALITY_OPTIONS, PROFILE_PROMPTS } from '@/lib/constants';
 
 const YEARS = ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Graduate', 'Other'];
@@ -376,12 +376,12 @@ export default function SettingsPage() {
             got too cramped on mobile. */}
         <section>
           <h2 className="text-base font-semibold text-slate-800 mb-4">Appearance</h2>
-          <div className="bg-gray-50 rounded-2xl p-6 flex items-center justify-between gap-4">
+          <div className="bg-gray-50 rounded-2xl p-6 space-y-4">
             <div>
               <p className="text-sm font-semibold text-slate-800">Theme</p>
-              <p className="text-sm text-slate-600 mt-0.5">Switch between light and dark mode.</p>
+              <p className="text-sm text-slate-600 mt-0.5">Pick how Wingman looks. Applies everywhere, right away.</p>
             </div>
-            <ThemeToggle />
+            <ThemeSelector />
           </div>
         </section>
 

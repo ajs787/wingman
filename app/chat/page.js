@@ -25,7 +25,7 @@ function ChatPreview({ chat, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-4 p-4 hover:bg-slate-50 transition-colors rounded-xl"
+      className="w-full flex items-center gap-4 p-4 rounded-xl transition-colors hover:bg-white/10"
     >
       {/* Avatar */}
       <div className="relative">

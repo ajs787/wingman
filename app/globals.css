@@ -38,27 +38,56 @@
     --peach-ink: 344 55% 16%;
   }
 
+  /* Dark = cool navy throughout. Every surface derives from these tokens so
+     the canvas and the legacy bg-white screens can't drift apart. */
   .dark {
-    /* Warm charcoal, not cool slate */
+    --background: 222 28% 9%;
+    --foreground: 210 30% 96%;
+    --card: 222 24% 14%;
+    --card-foreground: 210 30% 96%;
+    --popover: 222 24% 14%;
+    --popover-foreground: 210 30% 96%;
+    --primary: 338 82% 65%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 222 20% 18%;
+    --secondary-foreground: 210 30% 96%;
+    --muted: 222 20% 18%;
+    --muted-foreground: 215 18% 72%;
+    --accent: 222 20% 20%;
+    --accent-foreground: 210 30% 96%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 222 18% 24%;
+    --input: 222 18% 24%;
+    --ring: 338 82% 70%;
+    /* Secondary accent is light pink here, not peach. */
+    --peach: 340 88% 86%;
+    --peach-ink: 222 40% 12%;
+  }
+
+  /* Warm = the original brown charcoal + orange accents, kept as its own theme. */
+  .warm {
     --background: 24 16% 9%;
     --foreground: 35 30% 95%;
     --card: 24 14% 13%;
     --card-foreground: 35 30% 95%;
     --popover: 24 14% 13%;
     --popover-foreground: 35 30% 95%;
-    --primary: 338 82% 65%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 28 90% 58%;
+    --primary-foreground: 24 30% 10%;
     --secondary: 24 12% 18%;
     --secondary-foreground: 35 30% 95%;
     --muted: 24 12% 18%;
-    --muted-foreground: 30 12% 66%;
+    --muted-foreground: 30 12% 68%;
     --accent: 24 12% 20%;
     --accent-foreground: 35 30% 95%;
     --destructive: 0 62% 45%;
     --destructive-foreground: 0 0% 98%;
     --border: 24 10% 22%;
     --input: 24 10% 22%;
-    --ring: 338 82% 65%;
+    --ring: 28 90% 62%;
+    --peach: 27 100% 86%;
+    --peach-ink: 24 45% 14%;
   }
 
   .font-display {
@@ -146,6 +175,26 @@
 .dark .btn-gradient:hover {
   filter: brightness(1.06);
 }
+
+/* Warm theme CTAs are orange — without these they fall back to the light
+   theme's near-black and read as unstyled on the brown canvas. */
+.warm .btn-primary {
+  background-color: hsl(28 90% 56%);
+  background-image: none;
+  color: hsl(24 40% 10%);
+}
+.warm .btn-gradient {
+  background-image: linear-gradient(150deg, #f6a44a, #e2761b);
+  color: hsl(24 40% 10%);
+}
+.warm .btn-primary:hover,
+.warm .btn-gradient:hover {
+  filter: brightness(1.06);
+}
+
+/* Eyebrow label picks up each theme's secondary accent. */
+.dark .eyebrow { color: hsl(340 88% 84%); }
+.warm .eyebrow { color: hsl(28 90% 76%); }
 
 /* Selectable option chip. Base = outlined on the rose canvas (white text);
    .chip-selected flips to a warm peach fill with dark ink + a hard offset
@@ -240,77 +289,122 @@
   display: none;
 }
 
-/* Global dark-mode utility overrides for existing slate/white classes */
-.dark .bg-white { background-color: rgb(15 23 42) !important; }
-.dark .bg-slate-50 { background-color: rgb(30 41 59) !important; }
-.dark .bg-slate-100 { background-color: rgb(51 65 85) !important; }
-.dark .bg-gray-50 { background-color: rgb(30 41 59) !important; }
+/* DARK (cool navy). Legacy slate/white utilities are pinned to the same token
+   values as the canvas — previously bg-white screens (Settings) rendered cool
+   navy while bg-background screens (Feed) rendered warm brown, so the theme
+   changed as you moved between tabs. */
+.dark .bg-white { background-color: hsl(222 24% 14%) !important; }
+.dark .bg-slate-50 { background-color: hsl(222 22% 17%) !important; }
+.dark .bg-slate-100 { background-color: hsl(222 20% 20%) !important; }
+.dark .bg-gray-50 { background-color: hsl(222 22% 17%) !important; }
+.dark .bg-gray-100 { background-color: hsl(222 20% 20%) !important; }
 
 .dark .text-slate-900,
 .dark .text-slate-800,
-.dark .text-black { color: rgb(241 245 249) !important; }
+.dark .text-black { color: hsl(210 30% 96%) !important; }
 
 .dark .text-slate-700,
 .dark .text-slate-600,
-.dark .text-slate-500 { color: rgb(203 213 225) !important; }
+.dark .text-slate-500 { color: hsl(215 20% 80%) !important; }
 
 .dark .text-slate-400,
-.dark .text-slate-300 { color: rgb(148 163 184) !important; }
+.dark .text-slate-300 { color: hsl(215 16% 66%) !important; }
+
+/* Secondary accent in dark is light pink, not orange. */
+.dark .text-orange-300,
+.dark .text-orange-400,
+.dark .text-orange-500,
+.dark .text-orange-600,
+.dark .text-orange-700,
+.dark .text-amber-400,
+.dark .text-amber-500,
+.dark .text-amber-600 { color: hsl(340 88% 82%) !important; }
 
 .dark .border-slate-100,
 .dark .border-slate-200,
 .dark .border-gray-100,
 .dark .border-gray-200,
-.dark .border-gray-300 { border-color: rgb(51 65 85) !important; }
+.dark .border-gray-300 { border-color: hsl(222 18% 24%) !important; }
 
 .dark .hover\:bg-slate-50:hover,
 .dark .hover\:bg-gray-50:hover,
-.dark .hover\:bg-slate-100:hover { background-color: rgb(51 65 85) !important; }
+.dark .hover\:bg-slate-100:hover { background-color: hsl(222 20% 22%) !important; }
 
 .dark .hover\:text-slate-800:hover,
 .dark .hover\:text-slate-700:hover,
-.dark .hover\:text-black:hover { color: rgb(248 250 252) !important; }
+.dark .hover\:text-black:hover { color: hsl(210 40% 98%) !important; }
 
-/* Hot-pink light theme — legacy slate/gray/orange utilities were built for a
-   light canvas. Remap so text is white / super-light-pink and white surfaces
-   become pink (light mode only; dark-mode rules above are untouched). */
+/* WARM (brown + orange) — same shim set, warm values, orange accents kept. */
+.warm .bg-white { background-color: hsl(24 14% 13%) !important; }
+.warm .bg-slate-50 { background-color: hsl(24 13% 16%) !important; }
+.warm .bg-slate-100 { background-color: hsl(24 12% 19%) !important; }
+.warm .bg-gray-50 { background-color: hsl(24 13% 16%) !important; }
+.warm .bg-gray-100 { background-color: hsl(24 12% 19%) !important; }
+
+.warm .text-slate-900,
+.warm .text-slate-800,
+.warm .text-black { color: hsl(35 30% 95%) !important; }
+
+.warm .text-slate-700,
+.warm .text-slate-600,
+.warm .text-slate-500 { color: hsl(33 18% 80%) !important; }
+
+.warm .text-slate-400,
+.warm .text-slate-300 { color: hsl(30 12% 68%) !important; }
+
+.warm .border-slate-100,
+.warm .border-slate-200,
+.warm .border-gray-100,
+.warm .border-gray-200,
+.warm .border-gray-300 { border-color: hsl(24 10% 22%) !important; }
+
+.warm .hover\:bg-slate-50:hover,
+.warm .hover\:bg-gray-50:hover,
+.warm .hover\:bg-slate-100:hover { background-color: hsl(24 12% 21%) !important; }
+
+.warm .hover\:text-slate-800:hover,
+.warm .hover\:text-slate-700:hover,
+.warm .hover\:text-black:hover { color: hsl(35 40% 98%) !important; }
+
+/* LIGHT (rose). Legacy slate/gray/orange utilities were built for a white
+   canvas; remap them onto the rose one. Scoped away from .dark and .warm. */
 
 /* light surfaces -> deep rose so white text reads on them */
-html:not(.dark) .bg-white,
-html:not(.dark) .bg-slate-50,
-html:not(.dark) .bg-slate-100,
-html:not(.dark) .bg-gray-50,
-html:not(.dark) .bg-gray-100 { background-color: hsl(343 46% 30%) !important; }
+html:not(.dark):not(.warm) .bg-white,
+html:not(.dark):not(.warm) .bg-slate-50,
+html:not(.dark):not(.warm) .bg-slate-100,
+html:not(.dark):not(.warm) .bg-gray-50,
+html:not(.dark):not(.warm) .bg-gray-100 { background-color: hsl(343 46% 30%) !important; }
 
 /* primary / heading text -> white */
-html:not(.dark) .text-slate-600,
-html:not(.dark) .text-slate-700,
-html:not(.dark) .text-slate-800,
-html:not(.dark) .text-slate-900,
-html:not(.dark) .text-gray-700,
-html:not(.dark) .text-gray-800,
-html:not(.dark) .text-gray-900,
-html:not(.dark) .text-black { color: #ffffff !important; }
+html:not(.dark):not(.warm) .text-slate-600,
+html:not(.dark):not(.warm) .text-slate-700,
+html:not(.dark):not(.warm) .text-slate-800,
+html:not(.dark):not(.warm) .text-slate-900,
+html:not(.dark):not(.warm) .text-gray-700,
+html:not(.dark):not(.warm) .text-gray-800,
+html:not(.dark):not(.warm) .text-gray-900,
+html:not(.dark):not(.warm) .text-black { color: #ffffff !important; }
 
 /* secondary text + old warm accents -> super light pink */
-html:not(.dark) .text-slate-300,
-html:not(.dark) .text-slate-400,
-html:not(.dark) .text-slate-500,
-html:not(.dark) .text-gray-400,
-html:not(.dark) .text-gray-500,
-html:not(.dark) .text-gray-600,
-html:not(.dark) .text-orange-300,
-html:not(.dark) .text-orange-400,
-html:not(.dark) .text-orange-500,
-html:not(.dark) .text-orange-600,
-html:not(.dark) .text-orange-700,
-html:not(.dark) .text-amber-400,
-html:not(.dark) .text-amber-500,
-html:not(.dark) .text-amber-600 { color: #ffd6e6 !important; }
+html:not(.dark):not(.warm) .text-slate-300,
+html:not(.dark):not(.warm) .text-slate-400,
+html:not(.dark):not(.warm) .text-slate-500,
+html:not(.dark):not(.warm) .text-gray-400,
+html:not(.dark):not(.warm) .text-gray-500,
+html:not(.dark):not(.warm) .text-gray-600,
+html:not(.dark):not(.warm) .text-orange-300,
+html:not(.dark):not(.warm) .text-orange-400,
+html:not(.dark):not(.warm) .text-orange-500,
+html:not(.dark):not(.warm) .text-orange-600,
+html:not(.dark):not(.warm) .text-orange-700,
+html:not(.dark):not(.warm) .text-amber-400,
+html:not(.dark):not(.warm) .text-amber-500,
+html:not(.dark):not(.warm) .text-amber-600 { color: #ffd6e6 !important; }
 
-html:not(.dark) .hover\:text-slate-700:hover,
-html:not(.dark) .hover\:text-slate-800:hover,
-html:not(.dark) .hover\:text-slate-900:hover { color: #ffffff !important; }
+html:not(.dark):not(.warm) .hover\:text-slate-700:hover,
+html:not(.dark):not(.warm) .hover\:text-slate-800:hover,
+html:not(.dark):not(.warm) .hover\:text-slate-900:hover { color: #ffffff !important; }
 
 .warm-nav-shell {
   box-shadow: 0 20px 50px -24px rgba(84, 43, 12, 0.18);
