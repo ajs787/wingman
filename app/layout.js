@@ -30,7 +30,7 @@ export default function RootLayout({ children }) {
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var key='wingman-theme';var saved=localStorage.getItem(key);var prefersDark=window.matchMedia('(prefers-color-scheme: dark)').matches;var theme=saved||(prefersDark?'dark':'light');if(theme==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();`,
+            __html: `(function(){try{var k='wingman-theme';var s=localStorage.getItem(k);var d=window.matchMedia('(prefers-color-scheme: dark)').matches;var t=(s==='light'||s==='dark'||s==='warm')?s:(d?'dark':'light');var e=document.documentElement;e.classList.remove('dark','warm');if(t!=='light'){e.classList.add(t);}}catch(e){}})();`,
           }}
         />
       </head>
